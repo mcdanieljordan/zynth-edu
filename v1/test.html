@@ -19,7 +19,7 @@
 <ol id="search"></ol>
 <script src="./zynth-edu.js"></script>
 <script>
-  var status = document.getElementById('status');
+  var statusEl = document.getElementById('status');
   function fill(id, rows, n) {
     var ol = document.getElementById(id);
     rows.slice(0, n).forEach(function (r) {
@@ -30,15 +30,15 @@
     });
   }
   Teks.forGrade(3, { subject: 'pe' }).then(function (rows) {
-    status.className = 'ok';
-    status.textContent = 'Working! ' + rows.length + ' third-grade PE standards loaded (zynth-edu v' + ZynthEdu.version + '). First 5:';
+    statusEl.className = 'ok';
+    statusEl.textContent = 'Working! ' + rows.length + ' third-grade PE standards loaded (zynth-edu v' + ZynthEdu.version + '). First 5:';
     fill('list', rows, 5);
     return Teks.search('fraction', { grade: 3 });
   }).then(function (rows) {
     fill('search', rows, 5);
   }).catch(function (e) {
-    status.className = 'bad';
-    status.textContent = 'Problem: ' + e.message;
+    statusEl.className = 'bad';
+    statusEl.textContent = 'Problem: ' + e.message;
   });
 </script>
 </body>
