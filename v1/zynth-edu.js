@@ -1,5 +1,5 @@
 /*!
- * zynth-edu v1.0.0 - shared TEKS library for ZynthWav education apps.
+ * zynth-edu v1.0.1 - shared TEKS library for ZynthWav education apps.
  *
  * Gives any HTML page instant access to every Texas TEKS standard (stored in Supabase),
  * with browser caching so lookups are fast and keep working if the Wi-Fi drops.
@@ -13,15 +13,18 @@
  *   Teks.lineage('116.15.b.1.A')             -> chain: course > knowledge/skills > strand > standard
  *   Teks.children(id)                        -> items directly under an item
  *   Teks.search('fraction', {grade: 3})      -> text search
+ *   Teks.prerequisites('111.5.b.3.C')        -> earlier-grade standards it builds on (draft map)
+ *   Teks.scaffold('111.5.b.3.C', {depth: 2}) -> the chain two grades back
  *   Teks.subjects()                          -> list of chapters
  * Each item has: id, code, item_type, text, grade_level, grade_course_title, parent_id, ...
- * Options: lang ('en' or 'es', default 'en'), type (default 'Student Expectation', or 'all'), html (true adds raw html).
+ * Grades: 'PK', 'K', 1-8, or '6A'/'7A'/'8A' for the Middle School Advanced Mathematics courses (plain 6/7/8 = regular grade).
+ * Options: lang ('en' or 'es', default 'en'), type (default 'standard' = every real standard; or 'all'; or an item type such as 'Student Expectation'), html (true adds raw html).
  * Subjects: ela, math, science, socialstudies, lote, health, pe, finearts, tech, cte, spanishla (or a chapter number like '116').
  */
 (function (global) {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.0.1';
 
   var CFG = {
     url: 'https://aiczpuoskwzqtzvoomll.supabase.co',
@@ -50,7 +53,7 @@
     career: 'cte', careertechnicaleducation: 'cte'
   };
 
-  var BASE_COLS = 'id,code,item_type,statement_text,grade_level,grade_course_code,grade_course_title,parent_id,document_id,depth,list_order,language';
+  var BASE_COLS = 'id,code,item_type,is_standard,statement_text,grade_level,grade_course_code,grade_course_title,parent_id,document_id,depth,list_order,language';
   var PREFIX = 'zynthedu:v1:';
   var mem = {};
 
@@ -64,7 +67,9 @@
     if (/^pre/.test(s)) return 'PK';
     if (/^k/.test(s)) return 'K';
     var m = s.match(/\d+/);
-    return m ? String(parseInt(m[0], 10)) : s.toUpperCase();
+    if (!m) return s.toUpperCase();
+    var n = String(parseInt(m[0], 10));
+    return /adv|\d\s*a\s*$/.test(s) ? n + 'A' : n; // '7A' = Grade 7 Middle School Advanced Mathematics
   }
 
   function prefixFor(subject) {
@@ -126,8 +131,8 @@
     o = o || {};
     var p = ['select=' + cols(o), 'language=eq.' + enc(o.lang || CFG.lang)];
     if (o.grade !== undefined && o.grade !== null) p.push('grade_level=eq.' + enc(normGrade(o.grade)));
-    var type = o.type === undefined ? 'Student Expectation' : o.type;
-    if (type && type !== 'all') p.push('item_type=eq.' + enc(type));
+    if (o.type === undefined || o.type === 'standard') p.push('is_standard=eq.true'); // every real standard
+    else if (o.type && o.type !== 'all') p.push('item_type=eq.' + enc(o.type));
     if (o.prefix) p.push('code=like.' + enc(o.prefix) + '.*');
     return p;
   }
@@ -189,6 +194,44 @@
         p.push('limit=' + (o.limit || 25));
         return request('teks_items?' + p.join('&')).then(shape);
       });
+    },
+
+    // What this standard builds on (usually earlier grades). minStrength: 'weak' | 'medium' (default) | 'strong'.
+    prerequisites: function (code, o) {
+      o = o || {};
+      var rank = { weak: 0, medium: 1, strong: 2 };
+      var min = rank[o.minStrength || 'medium'];
+      return Teks.byCode(code, o).then(function (item) {
+        if (!item) return [];
+        var p = ['select=strength,score,level,reviewed,prereq:teks_items!prereq_id(' + cols(o) + ')',
+                 'item_id=eq.' + enc(item.id), 'level=eq.' + enc(o.level || 'standard')];
+        return request('teks_prerequisites?' + p.join('&')).then(function (rows) {
+          return rows.filter(function (r) { return r.prereq && rank[r.strength] >= min; })
+            .sort(function (a, b) { return (b.score || 0) - (a.score || 0); })
+            .map(function (r) {
+              var x = shape([r.prereq])[0];
+              x.strength = r.strength; x.score = r.score; x.reviewed = r.reviewed;
+              return x;
+            });
+        });
+      });
+    },
+
+    // Walk down the prerequisite chain: [{depth:1, items:[...]}, {depth:2, items:[...]}]. Options: depth (default 2), minStrength.
+    scaffold: function (code, o) {
+      o = o || {};
+      var maxDepth = o.depth || 2, seen = {};
+      function step(codes, d) {
+        if (d > maxDepth || !codes.length) return Promise.resolve([]);
+        return Promise.all(codes.map(function (c) { return Teks.prerequisites(c, o); })).then(function (lists) {
+          var level = [], next = [];
+          lists.forEach(function (l) {
+            l.forEach(function (it) { if (!seen[it.id]) { seen[it.id] = 1; level.push(it); next.push(it.code); } });
+          });
+          return step(next, d + 1).then(function (rest) { return [{ depth: d, items: level }].concat(rest); });
+        });
+      }
+      return step([code], 1).then(function (levels) { return levels.filter(function (l) { return l.items.length; }); });
     },
 
     subjects: function (o) {
