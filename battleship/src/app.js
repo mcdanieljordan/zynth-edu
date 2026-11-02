@@ -52,6 +52,12 @@ const CLIP={
   pentagon:'polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)',octagon:'polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)'
 };
 const THEMES={
+  holo:{name:'Holo Deck',base:'#12B5E5',glow:true,good:'#3CF0A0',bad:'#FF6B7D',disp:"'Orbitron','Arial Black',sans-serif",body:"'Rajdhani','Trebuchet MS',sans-serif",
+    panel:'rgba(3,10,26,0.70)',pInk:'#E8FBFF',line:'var(--acc)',lw:1,r:8,sh:'0 0 26px rgba(var(--accRgb),0.38), inset 0 0 36px rgba(var(--accRgb),0.10)',
+    head:'rgba(var(--accRgb),0.22)',headInk:'#F2FDFF',tile:'rgba(var(--accRgb),0.13)',tileInk:'#EAFDFF',tline:'rgba(var(--accRgb),0.85)',
+    tsh:'0 0 14px rgba(var(--accRgb),0.35), inset 0 0 18px rgba(var(--accRgb),0.12)',used:'rgba(255,255,255,0.04)',usedInk:'rgba(230,250,255,0.45)',
+    btn:'var(--acc)',btnInk:'#04101E',veil:[3,8,22,0.44],
+    layers:[{img:'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',size:'64px 64px'},{img:'linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',size:'64px 64px'}]},
   arcade:{name:'Arcade Harbor',base:'#2E9BE6',disp:"'Bungee','Arial Black',sans-serif",body:"'Fredoka','Trebuchet MS',sans-serif",
     panel:'#FFFFFF',pInk:'#10264A',line:'#10264A',lw:3,r:20,sh:'0 6px 0 #10264A',head:'#10264A',headInk:'#FFFFFF',tile:'#FFC62E',tileInk:'#10264A',tline:'#10264A',tsh:'0 4px 0 #10264A',used:'#D6E2EF',usedInk:'#5B7396',btn:'#26C46B',btnInk:'#10264A',veil:null,
     layers:[{img:'radial-gradient(circle at 50% 100%, rgba(255,255,255,0.30) 0 34px, transparent 35px)',pos:'0 100%',size:'96px 48px',rep:'repeat-x'},{img:'radial-gradient(circle at 50% 100%, rgba(16,38,74,0.18) 0 34px, transparent 35px)',pos:'48px 100%',size:'96px 62px',rep:'repeat-x'}]},
@@ -80,33 +86,49 @@ const rgbaStr=(v,a)=>'rgba('+v[0]+','+v[1]+','+v[2]+','+a+')';
 const rgbHex=v=>'#'+v.map(c=>c.toString(16).padStart(2,'0')).join('');
 const mixVeil=(v,w)=>w?v.map((c,i)=>Math.round(c*(1-w[3])+w[i]*w[3])):v;
 const fillFor=p=>p>55?'#22B35E':p>25?'#F2B01E':'#E5484D';
+let prevBg=null;
+function irisWipe(oldBg){
+  const w=$('#wipe');if(!w)return;
+  w.style.background=oldBg;w.classList.remove('go');void w.offsetWidth;w.classList.add('go');
+  clearTimeout(irisWipe.t);irisWipe.t=setTimeout(()=>w.classList.remove('go'),800);
+}
+const irisOK=()=>!matchMedia('(prefers-reduced-motion: reduce)').matches&&(!G||G.cfg.d3);
 function applyTheme(key,color){
   const T=THEMES[key]||THEMES.arcade,r=document.documentElement.style;
-  const bgRgb=mixVeil(hexRgb(color),T.veil),ink=rgbInk(bgRgb),inkRgb=hexRgb(ink),pRgb=hexRgb(T.pInk);
+  const base=hexRgb(color),bgRgb=mixVeil(base,T.veil),ink=rgbInk(bgRgb),inkRgb=hexRgb(ink),pRgb=hexRgb(T.pInk);
+  const acc=base.map(c=>Math.round(c+(255-c)*0.5));
   const layerCss=l=>l.img+' '+(l.pos||'0 0')+(l.size?' / '+l.size:'')+' '+(l.rep||'repeat');
   const veil=T.veil?['linear-gradient(rgba('+T.veil.join(',')+'), rgba('+T.veil.join(',')+'))']:[];
+  const glow=T.glow?['radial-gradient(ellipse 130% 85% at 50% 92%, '+rgbaStr(base,0.74)+', transparent 78%)']:[];
+  const bgCss=T.layers.map(layerCss).concat(glow).concat(veil).concat([color]).join(', ');
+  if(prevBg&&prevBg!==bgCss&&document.body.classList.contains('playing')&&irisOK())irisWipe(prevBg);
+  prevBg=bgCss;
   const set=(k,v)=>r.setProperty(k,v);
-  set('--bg',T.layers.map(layerCss).concat(veil).concat([color]).join(', '));
+  set('--bg',bgCss);
   set('--disp',T.disp);set('--body',T.body);set('--panel',T.panel);set('--pInk',T.pInk);set('--line',T.line);set('--lw',T.lw+'px');set('--r',T.r+'px');set('--sh',T.sh);
   set('--head',T.head);set('--headInk',T.headInk);set('--tile',T.tile);set('--tileInk',T.tileInk);set('--tline',T.tline);set('--tsh',T.tsh);
   set('--used',T.used);set('--usedInk',T.usedInk);set('--btn',T.btn);set('--btnInk',T.btnInk);
   set('--ink',ink);set('--inkRgb',inkRgb.join(','));set('--bgHex',rgbHex(bgRgb));
   set('--soft',rgbaStr(inkRgb,0.14));set('--softLine',rgbaStr(inkRgb,0.28));set('--pSoft',rgbaStr(pRgb,0.08));
+  set('--acc',rgbHex(acc));set('--accRgb',acc.join(','));
+  set('--good',T.good||'#1F9D55');set('--bad',T.bad||'#D64545');
+  document.documentElement.dataset.theme=key;
   return{T,ink,bgHex:rgbHex(bgRgb)};
 }
 
 /* ---------- classes and saved setup (this device) ---------- */
-const DEF_CFG={hp:800,timer:30,challenge:true,repairPct:100,lastChance:true,hints:true,mix:true,end:'board',vol:.85,theme:'arcade',surprise:false};
+const DEF_CFG={hp:800,timer:30,challenge:true,repairPct:100,lastChance:true,hints:true,mix:true,end:'board',vol:.85,theme:'holo',surprise:false,d3:true,fx:true,callouts:false,wake:false,v4:true};
 let meta=store.get('bj3-meta',null);
 if(!meta||!Array.isArray(meta.list)||!meta.list.length)meta={current:'Class 1',list:['Class 1']};
 const ck=k=>'bj3-'+k+'-'+meta.current;
 const saveMeta=()=>store.set('bj3-meta',meta);
 function defaultSetup(){return{teams:[0,1,2,3].map(i=>({name:defaultName(i),grade:3,members:[]})),cfg:{...DEF_CFG}};}
+function migrateCfg(c){const cfg=Object.assign({},DEF_CFG,c);if(!(c&&c.v4)){cfg.theme='holo';cfg.v4=true;}return cfg;}
 function loadSetup(){
   const s=store.get(ck('setup'),null);
   try{
     if(s&&Array.isArray(s.teams)&&s.teams.length>=2&&s.teams.length<=MAX_TEAMS){
-      return{teams:s.teams.map(t=>({name:String(t.name||''),grade:Math.max(0,Math.min(10,+t.grade||0)),members:Array.isArray(t.members)?t.members.map(String):[]})),cfg:Object.assign({},DEF_CFG,s.cfg)};
+      return{teams:s.teams.map(t=>({name:String(t.name||''),grade:Math.max(0,Math.min(10,+t.grade||0)),members:Array.isArray(t.members)?t.members.map(String):[]})),cfg:migrateCfg(s.cfg)};
     }
   }catch(e){}
   return defaultSetup();
@@ -127,8 +149,11 @@ function closeModal(){$('#modal').hidden=true;$('#sheet').innerHTML='';if(lastFo
 /* ============================ setup screen ============================ */
 const seg=(name,vals,cur,fmt)=>`<div class="seg" role="group">${vals.map(v=>`<button type="button" data-set="${name}" data-v="${v}" aria-pressed="${String(cur)===String(v)}">${fmt?fmt(v):v}</button>`).join('')}</div>`;
 const tgl=(id,label,on)=>`<label class="tgl"><span>${label}</span><input type="checkbox" id="${id}" ${on?'checked':''}><span class="tr"><i></i></span></label>`;
+let setupBooted=false;
 function renderSetup(){
   const c=setup.cfg,th=THEMES[c.theme]||THEMES.arcade;
+  applyFx();
+  $('#setup').classList.toggle('boot',!setupBooted);setupBooted=true;
   applyTheme(c.theme,th.base);
   document.body.classList.remove('playing');
   const sv=store.get(ck('save'),null);
@@ -141,7 +166,7 @@ function renderSetup(){
     <div class="hdr"><h1>Battleship Jeopardy</h1><div class="row">
       <label class="sr" for="clsSel">Class</label>
       <select id="clsSel" style="width:auto;min-width:180px">${meta.list.map(n=>`<option value="${esc(n)}" ${n===meta.current?'selected':''}>${esc(n)}</option>`).join('')}<option value="__new">＋ New class…</option></select>
-      <button class="ibtn wide" data-act="sound">Sound ${Snd.on?'on':'off'}</button>
+      <button class="ibtn wide${Voice.on?' live':''}" data-act="voice" aria-pressed="${Voice.on}">${ICON.mic}<span class="vlab">Voice ${Voice.on?'on':'off'}</span></button><button class="ibtn wide" data-act="sound">Sound ${Snd.on?'on':'off'}</button>
     </div></div>
     <p class="hero">Answer to load your ammo. Land a shot on a hidden fleet. When your ship takes a hit, answer to repair the damage.</p>
     ${resume}
@@ -166,6 +191,11 @@ function renderSetup(){
         <div class="card"><h3>Look</h3>
           <div class="themes">${THEME_KEYS.map(k=>{const t=THEMES[k];return`<button type="button" class="th" data-set="theme" data-v="${k}" aria-pressed="${c.theme===k}"><i style="background:linear-gradient(90deg,${t.base} 0 60%,${t.btn} 60% 100%)"></i>${t.name}</button>`;}).join('')}</div>
           ${tgl('tSurp','Surprise me: a new theme each game',c.surprise)}
+          ${tgl('tD3','3D camera and zoom animations',c.d3)}
+          ${tgl('tFx','Animated hologram background',c.fx)}
+          ${tgl('tCall','Computer voice callouts',c.callouts)}
+          ${tgl('tWake','Voice needs the wake word "computer"',c.wake)}
+          <button class="btn sm ghost block" data-act="vhelp" style="margin-top:8px">See voice commands</button>
         </div>
         <button class="btn lg block" data-act="start">Start the battle</button>
       </div>
@@ -269,7 +299,7 @@ function log(m,c=''){G.log.unshift({m,c});if(G.log.length>120)G.log.pop();}
 function newSurge(){G.surge=R(0,CATS.length-1)+'-'+R(0,ROWS-1);}
 function fit(){document.documentElement.style.setProperty('--s',Math.min(innerWidth/1440,innerHeight/900));}
 addEventListener('resize',fit);
-function showGame(on){$('#setup').hidden=on;$('#game').hidden=!on;document.body.classList.toggle('playing',on);if(on){fit();window.scrollTo(0,0);}}
+function showGame(on){$('#setup').hidden=on;$('#game').hidden=!on;document.body.classList.toggle('playing',on);if(on){fit();window.scrollTo(0,0);lastView=null;probeSpeed();}}
 
 function startGame(){
   saveSetup();
@@ -293,6 +323,7 @@ function resumeGame(){
     if(!s||!s.G||!Array.isArray(s.G.teams)||s.G.teams.length<2)throw 0;
     G={...s.G,used:new Set(s.G.used||[]),usedQ:new Set(s.G.usedQ||[]),over:false};
     if(G.teams.some(t=>!Array.isArray(t.ships)||!Array.isArray(t.map)))throw 0;
+    if(!G.cfg.v4){G.theme='holo';G.cfg.d3=true;G.cfg.v4=true;}
     S=null;
   }catch(e){store.del(ck('save'));G=null;renderSetup();return;}
   $('#victory').hidden=true;showGame(true);renderGame();
@@ -322,6 +353,7 @@ function resolveRepair(t,si,ok,taken,pct){
 
 /* ============================ rendering: turn screen ============================ */
 const ICON={
+  mic:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
   sound:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
   mute:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
   theme:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.6 0 2-1 1.6-2-.5-1.2.3-2.5 1.7-2.5H17a4 4 0 0 0 4-4C21 6.9 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>',
@@ -329,12 +361,13 @@ const ICON={
   bolt:'<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/></svg>',
   check:'<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
 };
+const micBtn=()=>`<button class="ibtn${Voice.on?' live':''}" data-act="voice" aria-pressed="${Voice.on}" aria-label="Voice commands ${Voice.on?'on':'off'}">${ICON.mic}</button>`;
 const topBar=chip=>`<div class="top"><div class="l"><div class="brand">Battleship Jeopardy</div><span class="chip">${esc(G.className)} · ${chip}</span><span class="chip">${esc(THEMES[G.theme].name)}</span></div>
-  <div class="r"><button class="ibtn" data-act="sound" aria-label="${Snd.on?'Sound on':'Sound off'}">${Snd.on?ICON.sound:ICON.mute}</button><button class="ibtn" data-act="theme" aria-label="Change theme">${ICON.theme}</button><button class="ibtn" data-act="end" aria-label="End or leave this game">${ICON.flag}</button></div></div>`;
+  <div class="r">${micBtn()}<button class="ibtn" data-act="sound" aria-label="${Snd.on?'Sound on':'Sound off'}">${Snd.on?ICON.sound:ICON.mute}</button><button class="ibtn" data-act="theme" aria-label="Change theme">${ICON.theme}</button><button class="ibtn" data-act="end" aria-label="End or leave this game">${ICON.flag}</button></div></div>`;
 const badgeHtml=(t,size,fs,extra='')=>`<div class="badge" style="width:${size}px;height:${size}px;clip-path:${CLIP[t.shape]};background:${extra||'var(--ink)'};color:${extra?inkFor(t.color):'var(--bgHex)'};font-size:${t.letter.length>1?Math.round(fs*0.74):fs}px"><span style="padding-top:${t.shape==='triangle'?Math.round(size*.15):t.shape==='star'?Math.round(size*.06):0}px">${esc(t.letter)}</span></div>`;
 function bannerHtml(t,sub){
-  const fs=Math.max(36,Math.min(76,Math.floor(1230/(Math.max(6,t.name.length)*0.92))));
-  return`<div class="banner">${badgeHtml(t,96,46)}<div style="min-width:0"><div class="bn-name" style="font-size:${fs}px">${esc(t.name)}</div><div class="bn-sub">${sub}</div></div></div>`;
+  const fs=Math.max(36,Math.min(76,Math.floor(1230/(Math.max(6,t.name.length)*1.02))));
+  return`<div class="banner"><div class="proj">${badgeHtml(t,96,46)}</div><div style="min-width:0"><div class="bn-name" style="font-size:${fs}px">${esc(t.name)}</div><div class="bn-sub">${sub}</div></div></div>`;
 }
 function shipsHtml(t){
   return t.ships.map(s=>{
@@ -353,7 +386,7 @@ function boardHtml(){
   let h=CATS.map(c=>`<div class="cat"><b>${esc(c.name)}</b></div>`).join('');
   for(let r=0;r<ROWS;r++)for(let c=0;c<CATS.length;c++){
     const k=c+'-'+r,used=G.used.has(k),surge=G.surge===k&&!used;
-    h+=`<button type="button" class="tile${used?' used':''}${S&&!used?' lock':''}" data-act="tile" data-ci="${c}" data-r="${r}" ${used||G.over||S?'disabled':''} aria-label="${esc(CATS[c].name)}, ${(r+1)*100} points${used?', already answered':surge?', power surge':''}">${used?ICON.check:(r+1)*100}${surge?`<span class="bolt">${ICON.bolt}</span>`:''}</button>`;
+    h+=`<button type="button" class="tile${used?' used':''}${S&&!used?' lock':''}${surge?' surge':''}" style="--i:${r*CATS.length+c}" data-act="tile" data-ci="${c}" data-r="${r}" ${used||G.over||S?'disabled':''} aria-label="${esc(CATS[c].name)}, ${(r+1)*100} points${used?', already answered':surge?', power surge':''}">${used?ICON.check:(r+1)*100}${surge?`<span class="bolt">${ICON.bolt}</span>`:''}</button>`;
   }
   return`<section class="board">${h}</section>`;
 }
@@ -367,10 +400,32 @@ function turnHtml(){
   const left=TILES-G.used.size,lim=G.cfg.end==='board'?1:G.cfg.end==='two'?2:0;
   return topBar(`Board ${G.round}${lim?' of '+lim:''} · ${left} tile${left===1?'':'s'} left`)+bannerHtml(t,'Pick a tile!')+`<div class="cols">${leftHtml(t)}${boardHtml()}${standingsHtml()}</div>`;
 }
+/* effects level: the Look toggle, or automatic if this computer is too slow to animate smoothly */
+let autoLite=false,probed=false;
+function applyFx(){document.documentElement.classList.toggle('lite',!setup.cfg.fx||autoLite);}
+function probeSpeed(){
+  if(probed||navigator.webdriver||!setup.cfg.fx)return;
+  probed=true;
+  let n=0,t0=0;
+  setTimeout(()=>{requestAnimationFrame(function f(t){if(!t0)t0=t;n++;if(t-t0<2200)requestAnimationFrame(f);else{
+    const fps=n/((t-t0)/1000);
+    if(fps<22){autoLite=true;applyFx();Voice.note('Slow computer: effects reduced. You can change this in Look.');}
+  }});},2500);
+}
+let lastView=null;
 function renderGame(){
   if(!G)return;
   const stage=$('#stage');
   stage.classList.toggle('compact',G.teams.length>8);
+  stage.classList.toggle('d3',!!G.cfg.d3);
+  /* camera move only when the screen really changes: zoom in to a question, pull back to the board */
+  const view=S?'s:'+S.step:'b:'+G.turn+':'+G.round;
+  let anim='';
+  if(view!==lastView){
+    anim=S?(S.step==='result'?'out':'in'):(lastView&&lastView[0]==='s'?'out':'boot');
+    lastView=view;
+  }
+  stage.dataset.anim=anim;
   stage.innerHTML=S?strikeHtml():turnHtml();
 }
 
@@ -382,6 +437,7 @@ function openStrike(ci,row){
   const atk=G.teams[G.turn],foes=G.teams.filter(t=>t!==atk&&t.alive);
   S={atk,key,ci,row,value:(row+1)*100,surge:G.surge===key,step:'target',target:foes.length===1?foes[0]:null,mult:1,dmg:0,si:-1,shot:null,res:null,ammoQ:null,replQ:null,idea:pick(IDEAS),hit:null,rep:null};
   Snd.play('pick');if(S.surge)setTimeout(()=>Snd.play('surge'),180);
+  Voice.say(CATS[ci].name+' '+S.value+(S.surge?', power surge':''));
   goStep(S.target?(G.cfg.challenge?'challenge':'ammo'):'target');
 }
 function goStep(step){
@@ -463,7 +519,7 @@ function mountQuestion(q,{seconds,contLabel,onDone}){
   if(q.q.length<=22&&/[=+×÷−%]/.test(q.q))$('#qtext').classList.add('eq');
   const host=$('#qopts');let answered=false,elapsed=0,extra=0,paused=false,lastT=performance.now(),lastSec=-1;
   const frac=()=>seconds?Math.min(1,elapsed/((seconds+extra)*1000)):1;
-  const btns=q.opts.map((o,i)=>{const b=el('button','opt',`<b>${'ABCD'[i]}</b><span></span>`);b.type='button';$('span',b).textContent=o;b.onclick=()=>finish(i);host.append(b);return b;});
+  const btns=q.opts.map((o,i)=>{const b=el('button','opt',`<b>${'ABCD'[i]}</b><span></span>`);b.type='button';b.style.setProperty('--oi',i);$('span',b).textContent=o;b.onclick=()=>finish(i);host.append(b);return b;});
   function finish(i){
     if(answered)return;answered=true;stopTimer();
     const f=Math.min(1,elapsed/(Math.max(1,seconds)*1000)),ok=i===q.ans,timedOut=i<0;
@@ -539,7 +595,7 @@ function mountFire(){
       const h=resolveHit(t,res.si,S.dmg,G.cfg.lastChance);S.hit=h;
       S.atk.stats.dealt+=h.taken;if(ship.sunk)S.atk.stats.sunk++;
       for(let a=0;a<N;a++)for(let d=0;d<N;d++)paint(cells[a*N+d],t.shots[a][d]);
-      setTimeout(()=>{Snd.play(ship.sunk?'sunk':'hit');ship.sunk?FX.sunk(x,y):FX.hit(x,y);FX.shake($('#stage'));},280);
+      setTimeout(()=>{Snd.play(ship.sunk?'sunk':'hit');ship.sunk?FX.sunk(x,y):FX.hit(x,y);FX.shake($('#stage'));sea.classList.remove('punch','pull');void sea.offsetWidth;sea.classList.add(ship.sunk?'pull':'punch');Voice.say(ship.sunk?'Ship destroyed':'Direct hit');},280);
       log(`${S.atk.name} hits ${t.name}'s ${ship.name} at ${coord} for ${h.taken}.`,'hit');
       const goesRepair=!ship.sunk&&t.alive;
       out.innerHTML=`<div class="fb no"><h3>Direct hit on the ${esc(ship.name)}!</h3><p>${h.taken} damage.${ship.sunk?(h.state==='holes'?' Every square is hit, so the hull collapses.':' The ship goes down.'):ship.critical?' It is at 0 HP: one answer can save it.':''}${goesRepair?` ${esc(t.name)} can repair by answering a question.`:''}</p></div>`;
@@ -548,7 +604,7 @@ function mountFire(){
     }else{
       paint(b,t.shots[r][c]);
       S.res={type:res.type};
-      setTimeout(()=>{Snd.play('miss');FX.splash(x,y);},280);
+      setTimeout(()=>{Snd.play('miss');FX.splash(x,y);Voice.say(res.type==='near'?'Near miss':'Miss');},280);
       log(`${S.atk.name} fires at ${coord} on ${t.name}: ${res.type==='near'?'miss, but a ship is close':'splash, nothing there'}.`);
       out.innerHTML=`<div class="fb"><h3>${res.type==='near'?'Near miss':'Splash'}</h3><p>${res.type==='near'?'The radar picked up a ship right next to that square.':'Nothing there. No damage this turn.'}</p></div>`;
       nxt.textContent='Continue';nxt.onclick=()=>{Snd.play('click');goStep('result');};
@@ -570,6 +626,7 @@ function mountRepair(){
       S.rep={ok,...r,crit};t.stats.healed+=r.heal;
       if(S.rep.sunk)S.atk.stats.sunk++;
       if(ok)Snd.play('deflect');
+      Voice.say(ok?(crit?'Ship saved':'Repair complete'):(crit?'Ship lost':'Repair failed'));
       log(ok?`${t.name} repairs the ${sh.name}: +${r.heal} HP${crit?' and saves it from sinking':''}.`:`${t.name} fails to repair the ${sh.name}${crit?' and it sinks':''}.`,ok?'good':'warn');
       if(r.eliminated)log(`${t.name} has been eliminated!`,'hit');
       goStep('result');
@@ -592,11 +649,11 @@ function resultHtml(){
     if(rep)rows.push([rep.ok?(rep.saved?'Repair saved the ship':'Repair heals'):'Repair failed',rep.ok?'+'+rep.heal:'0']);
     title=t.alive?(ship.sunk?`The ${ship.name} is sunk!`:`${esc(ship.name)} now at ${ship.hp} / ${ship.maxHp} HP`):`${esc(t.name)} is eliminated!`;
     body=`<table class="calc"><tbody>${rows.map(([a,b])=>`<tr><td>${esc(a)}</td><td>${b}</td></tr>`).join('')}<tr class="tot"><td>${esc(t.name)} HP now</td><td>${teamHp(t)} / ${teamMax(t)}</td></tr></tbody></table>
-      <div style="display:grid;gap:8px;margin-top:8px">${shipsHtml(t)}</div>`;
+      <div class="fleet2">${shipsHtml(t)}</div>`;
   }
   applyTheme(G.theme,teamForColor.color);
   return topBar('Result')+bannerHtml(teamForColor,'Result')+`<div class="qcols"><aside class="qleft"><div class="cap">${esc(CATS[S.ci].name)}</div><div class="big">${S.value}</div><div class="cap">points${S.surge?' · power surge x2':''}</div></aside>
-    <section class="qmid"><h3 class="qtext" style="font-size:44px">${title}</h3>${body}<button class="btn lg block" data-act="done" style="margin-top:auto">Next squad's turn</button></section>
+    <section class="qmid"><h3 class="qtext" style="font-size:40px">${title}</h3>${body}<button class="btn lg block" data-act="done" style="margin-top:auto">Next squad's turn</button></section>
     <aside class="qright"><div class="cap">Next up</div><div style="font-size:26px;font-weight:700;line-height:1.2">${esc(nextTeam().name)}</div></aside></div>`;
 }
 function afterResult(){
@@ -641,7 +698,7 @@ function endGame(reason){
     <div class="row2"><button class="btn lg" data-act="rematch">Rematch</button><button class="btn lg ghost" data-act="back">Back to setup</button></div>`;
   $('#victory').hidden=false;renderGame();
   $('[data-act="rematch"]').focus({preventScroll:true});
-  Snd.play('win');FX.rain(4200);FX.fireworks(6);
+  Snd.play('win');FX.rain(4200);FX.fireworks(6);Voice.say(winners.length===1?top.name+' wins':'It is a tie');
 }
 function toSetup(){
   stopTimer();S=null;G=null;
@@ -677,13 +734,15 @@ document.addEventListener('click',e=>{
     discard:()=>{store.del(ck('save'));renderSetup();},
     sound:toggleSound,
     theme:cycleTheme,
+    voice:()=>Voice.toggle(),
+    vhelp:()=>Voice.help(),
     end:openEnd,
     roster:openRoster,
     'add-team':()=>{if(setup.teams.length<MAX_TEAMS){setup.teams.push({name:defaultName(setup.teams.length),grade:setup.teams[0]?setup.teams[0].grade:3,members:[]});saveSetup();renderTeams();}},
     'del-team':()=>{const i=+b.closest('.trow').dataset.i;if(setup.teams.length>2){setup.teams.splice(i,1);saveSetup();renderTeams();}},
     tile:()=>openStrike(+b.dataset.ci,+b.dataset.r),
     'pick-target':()=>{S.target=G.teams[+b.dataset.i];Snd.play('click');renderGame();},
-    lock:()=>{Snd.play('click');goStep(G.cfg.challenge?'challenge':'ammo');},
+    lock:()=>{Snd.play('click');Voice.say('Target locked: '+S.target.name);goStep(G.cfg.challenge?'challenge':'ammo');},
     'cancel-strike':closeStrike,
     'chal-ok':()=>{Snd.play('correct');goStep('ammo');},
     'chal-no':()=>{Snd.play('wrong');S.res={type:'jam'};log(`${S.atk.name} missed the challenge. Turn passes.`,'warn');goStep('result');},
@@ -715,6 +774,10 @@ document.addEventListener('change',e=>{
   if(id==='tChal'){setup.cfg.challenge=e.target.checked;saveSetup();return;}
   if(id==='tHints'){setup.cfg.hints=e.target.checked;saveSetup();return;}
   if(id==='tSurp'){setup.cfg.surprise=e.target.checked;saveSetup();return;}
+  if(id==='tD3'){setup.cfg.d3=e.target.checked;saveSetup();return;}
+  if(id==='tFx'){setup.cfg.fx=e.target.checked;autoLite=false;saveSetup();applyFx();return;}
+  if(id==='tCall'){setup.cfg.callouts=e.target.checked;saveSetup();if(e.target.checked)Voice.say('Computer voice on');return;}
+  if(id==='tWake'){setup.cfg.wake=e.target.checked;saveSetup();return;}
   if(id==='clsSel'){
     if(e.target.value==='__new'){
       openModal(`<h2>New class</h2><div class="field"><label class="lbl" for="newCls">Class name</label><input type="text" id="newCls" maxlength="24" placeholder="Example: Kb"></div><div class="row2"><button class="btn" id="newGo">Create class</button><button class="btn ghost" id="newNo">Cancel</button></div>`);
@@ -731,6 +794,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!$('#modal').hidden){closeModal();return;}
   const tag=(e.target&&e.target.tagName)||'';
   if(!S||!qHandle||/INPUT|TEXTAREA|SELECT/.test(tag))return;
+  if(e.key==='r'||e.key==='R'){Voice.readQuestion();return;}
   const k=e.key.toLowerCase(),i='1234'.indexOf(k)>=0&&k.length===1?+k-1:'abcd'.indexOf(k)>=0&&k.length===1?'abcd'.indexOf(k):-1;
   if(i>=0)qHandle.pick(i);
 });
@@ -739,5 +803,16 @@ addEventListener('pointerdown',()=>Snd.unlock(),{once:true});
 /* ============================ start-up ============================ */
 Snd.vol=typeof setup.cfg.vol==='number'?setup.cfg.vol:.85;
 Snd.load();
-fit();renderSetup();
+fit();applyFx();renderSetup();
+(function rig(){
+  const p=$('#holoBg .parts');
+  if(p)for(let i=0;i<18;i++){const d=document.createElement('i');d.style.cssText=`left:${(Math.random()*100).toFixed(1)}%;--d:${(8+Math.random()*10).toFixed(1)}s;--dl:${(-Math.random()*14).toFixed(1)}s;--z:${(2+Math.random()*4).toFixed(1)}px`;p.append(d);}
+  let raf=0,mx=0,my=0;
+  addEventListener('pointermove',e=>{
+    if(e.pointerType!=='mouse')return;
+    mx=e.clientX;my=e.clientY;
+    if(raf)return;
+    raf=requestAnimationFrame(()=>{raf=0;const st=$('#stage');if(!st)return;st.style.setProperty('--px',((mx/innerWidth-.5)*2).toFixed(3));st.style.setProperty('--py',((my/innerHeight-.5)*2).toFixed(3));});
+  });
+})();
 window.__bj={get G(){return G;},get S(){return S;},setup:()=>setup};

@@ -6,7 +6,7 @@
 <title>Battleship Jeopardy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;700&family=Bangers&family=Baloo+2:wght@400;600;700&family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Comic+Neue:wght@400;700&family=Fredoka:wght@400;500;600;700&family=Orbitron:wght@500;700&family=Pirata+One&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;700&family=Bangers&family=Baloo+2:wght@400;600;700&family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Comic+Neue:wght@400;700&family=Fredoka:wght@400;500;600;700&family=Orbitron:wght@500;700;900&family=Pirata+One&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* Battleship Jeopardy v2. Theme tokens are set on :root by applyTheme(); the active team's color floods the page background. */
 :root{
@@ -205,13 +205,290 @@ textarea{resize:vertical;line-height:1.3}
 @keyframes shake{0%,100%{translate:0 0}20%{translate:-10px 0}40%{translate:9px 0}60%{translate:-6px 0}80%{translate:4px 0}}
 @media (prefers-reduced-motion:reduce){.shake{animation:none}.btn,.tile{transition:none}}
 
+/* ================================================================
+   HOLO DECK: futuristic skin + 3D layout + camera zoom animations + voice HUD
+   - html[data-theme="holo"] = hologram look (set by applyTheme)
+   - #stage.d3 = tilted 3D panels + zoom in/out camera moves (toggle in Look)
+   ================================================================ */
+:root{--acc:#88DAF2;--accRgb:136,218,242;--px:0;--py:0}
+
+/* ---------- always-on pieces (any theme) ---------- */
+.proj{flex:none;position:relative;width:96px;height:96px}
+.fleet2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 22px;margin-top:6px}
+.tile.surge{animation:surgePulse 1.3s ease-in-out infinite}
+@keyframes surgePulse{0%,100%{box-shadow:var(--tsh)}50%{box-shadow:var(--tsh),0 0 22px 6px rgba(255,214,64,.85)}}
+.opts .opt{animation:optIn .45s cubic-bezier(.2,.9,.3,1.2) backwards;animation-delay:calc(var(--oi,0)*70ms)}
+@keyframes optIn{from{opacity:0;translate:0 26px;scale:.92}to{opacity:1;translate:0 0;scale:1}}
+.sea.punch{animation:punch .5s ease-out}
+@keyframes punch{0%{scale:1}30%{scale:1.1}100%{scale:1}}
+.sea.pull{animation:pullS 1s ease-out}
+@keyframes pullS{0%{scale:1.18;filter:brightness(1.7)}100%{scale:1;filter:none}}
+.modal:not([hidden]) .sheet{animation:popIn .35s cubic-bezier(.2,.9,.3,1.15)}
+#victory:not([hidden]) .vbox{animation:camIn .8s cubic-bezier(.16,.84,.3,1)}
+@keyframes popIn{from{opacity:0;scale:.86}to{opacity:1;scale:1}}
+
+/* iris wipe: the old team color shrinks toward the badge, revealing the new team's color */
+#wipe{position:fixed;inset:0;z-index:1;pointer-events:none;display:none}
+#wipe.go{display:block;animation:iris .72s cubic-bezier(.65,0,.3,1) forwards}
+@keyframes iris{from{clip-path:circle(150% at 7% 17%)}to{clip-path:circle(0% at 7% 17%)}}
+
+/* ---------- camera moves (3D on) ---------- */
+@keyframes camIn{from{opacity:0;transform:perspective(1100px) translateZ(-620px) rotateX(10deg);filter:blur(10px) brightness(1.8)}
+  55%{filter:blur(0) brightness(1.2)}
+  to{opacity:1;transform:perspective(1100px) translateZ(0) rotateX(0);filter:none}}
+@keyframes camOut{from{opacity:0;transform:perspective(1100px) translateZ(480px);filter:blur(8px) brightness(1.7)}
+  55%{opacity:1;filter:blur(0) brightness(1.2)}
+  to{opacity:1;transform:perspective(1100px) translateZ(0);filter:none}}
+@keyframes slideL{from{translate:-150px 0;opacity:0}to{translate:0 0;opacity:1}}
+@keyframes slideR{from{translate:150px 0;opacity:0}to{translate:0 0;opacity:1}}
+@keyframes tileBoot{from{opacity:0;transform:perspective(520px) rotateX(-75deg) translateZ(-70px)}to{opacity:1;transform:none}}
+@keyframes holoIn{0%{opacity:0;letter-spacing:.35em;filter:blur(8px)}100%{opacity:1;letter-spacing:normal;filter:none}}
+@keyframes bannerIn{from{opacity:0;translate:0 -24px}to{opacity:1;translate:0 0}}
+
+#stage.d3[data-anim="in"] .qcols{animation:camIn .75s cubic-bezier(.16,.84,.3,1) backwards}
+#stage.d3[data-anim="out"] .qcols,#stage.d3[data-anim="out"] .cols{animation:camOut .8s cubic-bezier(.16,.84,.3,1) backwards}
+#stage.d3[data-anim="boot"] .cols{animation:camIn .8s cubic-bezier(.16,.84,.3,1) backwards}
+#stage.d3[data-anim="boot"] .left,#stage.d3[data-anim="in"] .qleft{animation:slideL .7s cubic-bezier(.2,.8,.2,1) .12s backwards}
+#stage.d3[data-anim="boot"] .side,#stage.d3[data-anim="in"] .qright{animation:slideR .7s cubic-bezier(.2,.8,.2,1) .12s backwards}
+#stage.d3[data-anim="boot"] .tile{animation:tileBoot .55s cubic-bezier(.2,.9,.3,1.15) backwards;animation-delay:calc(var(--i,0)*24ms + 160ms)}
+#stage.d3[data-anim] .banner{animation:bannerIn .55s ease-out backwards}
+#stage.d3[data-anim] .bn-name{animation:holoIn .7s ease-out backwards}
+
+/* ---------- 3D layout: console panels angled toward the viewer ---------- */
+#stage.d3 .left,#stage.d3 .qleft{transform:perspective(1500px) rotateY(calc(11deg + var(--px)*4deg));transform-origin:left center}
+#stage.d3 .side,#stage.d3 .qright{transform:perspective(1500px) rotateY(calc(-11deg + var(--px)*4deg));transform-origin:right center}
+#stage.d3 .board{transform:perspective(1900px) rotateX(calc(4deg - var(--py)*2deg)) rotateY(calc(var(--px)*2.5deg));transform-origin:50% 100%}
+#stage.d3 .qmid{transform:perspective(1900px) rotateX(calc(3deg - var(--py)*2deg)) rotateY(calc(var(--px)*2deg));transform-origin:50% 100%}
+#stage.d3 .tile:hover:not(:disabled){transform:perspective(600px) translateZ(26px) scale(1.04);z-index:2}
+#stage.d3 .tile:active:not(:disabled){transform:perspective(600px) translateZ(8px)}
+
+/* ================================================================
+   HOLO DECK theme
+   ================================================================ */
+html[data-theme="holo"] body{letter-spacing:.01em}
+#holoBg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;display:none}
+html[data-theme="holo"] #holoBg{display:block}
+#holoBg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,transparent 48%,rgba(0,0,0,.5) 100%)}
+#holoBg::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 4px)}
+#holoBg .floor{position:absolute;left:-20%;right:-20%;bottom:-6%;height:46%;overflow:hidden;transform:perspective(560px) rotateX(66deg);transform-origin:50% 100%;
+  -webkit-mask-image:linear-gradient(to top,#000 0%,transparent 88%);mask-image:linear-gradient(to top,#000 0%,transparent 88%)}
+#holoBg .floor::before{content:'';position:absolute;left:0;right:0;top:-96px;bottom:0;will-change:transform;
+  background-image:linear-gradient(rgba(var(--accRgb),.55) 2px,transparent 2px),linear-gradient(90deg,rgba(var(--accRgb),.55) 2px,transparent 2px);
+  background-size:96px 96px;animation:floorMove 3.6s linear infinite}
+@keyframes floorMove{to{transform:translateY(96px)}}
+/* one slow scan beam for the whole screen (cheap: it only moves, never repaints) */
+#holoBg .sweep{position:absolute;left:0;right:0;top:0;height:220px;will-change:transform;
+  background:linear-gradient(to bottom,transparent,rgba(var(--accRgb),.14),transparent);animation:sweepDown 8s linear infinite}
+@keyframes sweepDown{from{transform:translateY(-220px)}to{transform:translateY(100vh)}}
+#holoBg .beam{position:absolute;top:-10%;bottom:28%;width:20%;background:linear-gradient(to bottom,transparent,rgba(var(--accRgb),.20) 45%,transparent);animation:beamSway 8s ease-in-out infinite alternate}
+#holoBg .b1{left:3%;transform:skewX(-14deg)}
+#holoBg .b2{right:3%;transform:skewX(14deg);animation-delay:-4s}
+@keyframes beamSway{from{opacity:.25}to{opacity:.95}}
+#holoBg .parts i{position:absolute;bottom:-14px;width:var(--z);height:var(--z);border-radius:50%;background:rgba(var(--accRgb),.95);box-shadow:0 0 8px var(--acc);opacity:0;animation:rise var(--d) linear var(--dl) infinite}
+@keyframes rise{0%{translate:0 0;opacity:0}12%{opacity:.85}100%{translate:0 -112vh;opacity:0}}
+
+/* glass panels with corner brackets and a slow scan beam */
+html[data-theme="holo"] .card,html[data-theme="holo"] .board,html[data-theme="holo"] .left,html[data-theme="holo"] .qleft,
+html[data-theme="holo"] .qright,html[data-theme="holo"] .qmid,html[data-theme="holo"] .side{position:relative}
+html[data-theme="holo"] .card::before,html[data-theme="holo"] .board::before,html[data-theme="holo"] .left::before,html[data-theme="holo"] .qleft::before,
+html[data-theme="holo"] .qright::before,html[data-theme="holo"] .qmid::before,html[data-theme="holo"] .side::before{
+  content:'';position:absolute;inset:-2px;pointer-events:none;z-index:3;
+  background:
+    linear-gradient(var(--acc),var(--acc)) top left/22px 3px no-repeat,linear-gradient(var(--acc),var(--acc)) top left/3px 22px no-repeat,
+    linear-gradient(var(--acc),var(--acc)) top right/22px 3px no-repeat,linear-gradient(var(--acc),var(--acc)) top right/3px 22px no-repeat,
+    linear-gradient(var(--acc),var(--acc)) bottom left/22px 3px no-repeat,linear-gradient(var(--acc),var(--acc)) bottom left/3px 22px no-repeat,
+    linear-gradient(var(--acc),var(--acc)) bottom right/22px 3px no-repeat,linear-gradient(var(--acc),var(--acc)) bottom right/3px 22px no-repeat}
+html[data-theme="holo"] .board::after,html[data-theme="holo"] .left::after,html[data-theme="holo"] .qleft::after,
+html[data-theme="holo"] .qright::after,html[data-theme="holo"] .qmid::after,html[data-theme="holo"] .side::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:inherit;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 4px)}
+html[data-theme="holo"] .left,html[data-theme="holo"] .qleft,html[data-theme="holo"] .qright{
+  background:linear-gradient(180deg,rgba(var(--accRgb),.16),rgba(var(--accRgb),.04)),rgba(3,10,26,.64);border:1px solid rgba(var(--accRgb),.55);
+  box-shadow:0 0 22px rgba(var(--accRgb),.28),inset 0 0 30px rgba(var(--accRgb),.08)}
+html[data-theme="holo"] .card,html[data-theme="holo"] .board,html[data-theme="holo"] .qmid,html[data-theme="holo"] .side,
+html[data-theme="holo"] .sheet,html[data-theme="holo"] .vbox{border-width:1px;border-color:rgba(var(--accRgb),.65)}
+
+/* headline + banner = hologram text */
+html[data-theme="holo"] .hdr h1,html[data-theme="holo"] .bn-name,html[data-theme="holo"] .brand{
+  font-weight:700;text-shadow:0 0 12px rgba(var(--accRgb),.95),0 0 34px rgba(var(--accRgb),.55),2px 0 rgba(255,60,90,.35),-2px 0 rgba(60,220,255,.35)}
+html[data-theme="holo"] .hdr h1{text-transform:uppercase;letter-spacing:.06em;animation:holoFlicker 7s infinite}
+html[data-theme="holo"] .bn-name{text-transform:uppercase;letter-spacing:.03em;animation:holoFlicker 9s infinite}
+html[data-theme="holo"] .brand{font-size:21px;letter-spacing:.14em;text-transform:uppercase}
+@keyframes holoFlicker{0%,90%,100%{opacity:1}91%{opacity:.55}92%{opacity:1}95%{opacity:.78}96%{opacity:1}}
+html[data-theme="holo"] .bn-sub{font-size:32px;letter-spacing:.04em;text-shadow:0 0 14px rgba(var(--accRgb),.7)}
+html[data-theme="holo"] .hero{font-size:24px}
+html[data-theme="holo"] .hdr h1{font-size:clamp(26px,3.6vw,38px)}
+html[data-theme="holo"] .upname{font-family:var(--body);letter-spacing:.04em}
+
+/* the team badge floats over a projector pad */
+html[data-theme="holo"] .proj{perspective:520px}
+html[data-theme="holo"] .proj::before{content:'';position:absolute;left:14px;right:14px;bottom:8px;height:64px;pointer-events:none;
+  background:linear-gradient(to top,rgba(var(--accRgb),.55),transparent);clip-path:polygon(0 100%,100% 100%,82% 0,18% 0);opacity:.7;animation:beamSway 2.4s ease-in-out infinite alternate}
+html[data-theme="holo"] .proj::after{content:'';position:absolute;left:-12px;right:-12px;bottom:-9px;height:20px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(var(--accRgb),.95),rgba(var(--accRgb),.25) 55%,transparent 72%);animation:padPulse 2.4s ease-in-out infinite}
+@keyframes padPulse{0%,100%{opacity:.6;scale:1}50%{opacity:1;scale:1.12}}
+html[data-theme="holo"] .banner .badge{position:relative;z-index:1;background:linear-gradient(180deg,#FFFFFF 0%,var(--acc) 100%);color:#04101E;
+  animation:badgeFloat 5s ease-in-out infinite}
+@keyframes badgeFloat{0%,100%{transform:translateY(-3px) rotateY(-26deg)}50%{transform:translateY(-9px) rotateY(26deg)}}
+
+/* chrome: chips, icon buttons, buttons */
+html[data-theme="holo"] .chip{background:rgba(var(--accRgb),.16);border:1px solid rgba(var(--accRgb),.55);color:#EAFDFF;font-size:21px}
+html[data-theme="holo"] .chip.solid{background:var(--acc);color:#04101E;border-color:var(--acc)}
+html[data-theme="holo"] .chip.pan{background:rgba(var(--accRgb),.10);color:var(--pInk)}
+html[data-theme="holo"] .ibtn{border:1px solid var(--acc);background:rgba(var(--accRgb),.14);color:var(--acc);border-radius:10px;box-shadow:0 0 12px rgba(var(--accRgb),.35)}
+html[data-theme="holo"] .ibtn:hover{background:rgba(var(--accRgb),.3)}
+.ibtn.live{box-shadow:0 0 0 3px rgba(var(--accRgb),.55),0 0 22px rgba(var(--accRgb),.8)!important;animation:livePulse 1.6s ease-in-out infinite}
+@keyframes livePulse{50%{box-shadow:0 0 0 6px rgba(var(--accRgb),.25),0 0 30px rgba(var(--accRgb),.9)}}
+html[data-theme="holo"] .btn{font-family:var(--body);font-weight:700;text-transform:uppercase;letter-spacing:.09em;font-size:23px;
+  border:1px solid var(--acc);border-radius:8px;background:var(--acc);color:#04101E;box-shadow:0 0 18px rgba(var(--accRgb),.55)}
+html[data-theme="holo"] .btn.sm{font-size:20px}
+html[data-theme="holo"] .btn.lg{font-size:30px}
+html[data-theme="holo"] .btn:hover:not(:disabled){filter:brightness(1.12);transform:none;box-shadow:0 0 30px rgba(var(--accRgb),.9)}
+html[data-theme="holo"] .btn:active:not(:disabled){transform:scale(.98)}
+html[data-theme="holo"] .btn.ghost{background:rgba(var(--accRgb),.08);color:var(--acc)}
+html[data-theme="holo"] .btn.sun{background:#FFC857;border-color:#FFC857;color:#2A1A00;box-shadow:0 0 18px rgba(255,200,87,.55)}
+html[data-theme="holo"] .btn.bad{background:var(--bad);border-color:var(--bad);color:#1A0206;box-shadow:0 0 18px rgba(255,107,125,.55)}
+html[data-theme="holo"] .btn:disabled{opacity:.4;box-shadow:none}
+html[data-theme="holo"] .resume{background:rgba(255,200,87,.16);border-color:#FFC857;color:#FFF3D6}
+html[data-theme="holo"] .resume.card::before{display:none}
+
+/* forms on the setup screen */
+html[data-theme="holo"] input[type=text],html[data-theme="holo"] input[type=number],html[data-theme="holo"] select,html[data-theme="holo"] textarea{
+  background:rgba(2,8,22,.72);color:#EAFDFF;border:1px solid var(--acc);border-radius:8px;font-size:22px;box-shadow:inset 0 0 12px rgba(var(--accRgb),.18)}
+html[data-theme="holo"] select option{background:#06142C;color:#EAFDFF}
+html[data-theme="holo"] ::placeholder{color:rgba(234,253,255,.45)}
+html[data-theme="holo"] .lbl{font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:var(--acc)}
+html[data-theme="holo"] .card h3{font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);text-shadow:0 0 10px rgba(var(--accRgb),.7);font-size:23px}
+html[data-theme="holo"] .note{font-size:19px}
+html[data-theme="holo"] .seg button{background:rgba(2,8,22,.6);color:#EAFDFF;border:1px solid rgba(var(--accRgb),.7);border-radius:8px;font-size:22px}
+html[data-theme="holo"] .seg button[aria-pressed=true]{background:var(--acc);color:#04101E;box-shadow:0 0 16px rgba(var(--accRgb),.7)}
+html[data-theme="holo"] .tgl{font-size:22px}
+html[data-theme="holo"] .tgl .tr{border:1px solid var(--acc);background:rgba(2,8,22,.7)}
+html[data-theme="holo"] .tgl .tr i{background:rgba(var(--accRgb),.7);border:0}
+html[data-theme="holo"] .tgl input:checked + .tr{background:rgba(var(--accRgb),.5)}
+html[data-theme="holo"] .tgl input:checked + .tr i{background:#fff;box-shadow:0 0 10px var(--acc)}
+html[data-theme="holo"] .th{background:rgba(2,8,22,.6);color:#EAFDFF;border:1px solid rgba(var(--accRgb),.55);border-radius:8px;font-size:19px}
+html[data-theme="holo"] .th[aria-pressed=true]{background:rgba(var(--accRgb),.25);box-shadow:0 0 16px rgba(var(--accRgb),.7);border-color:var(--acc)}
+html[data-theme="holo"] .th i{border:1px solid rgba(255,255,255,.5)}
+html[data-theme="holo"] .trow{background:rgba(var(--accRgb),.07);border:1px solid rgba(var(--accRgb),.25);border-radius:10px}
+html[data-theme="holo"] .trow .x{background:rgba(2,8,22,.6);color:var(--acc);border:1px solid var(--acc);border-radius:8px}
+html[data-theme="holo"] .steps div{background:rgba(var(--accRgb),.09);border:1px solid rgba(var(--accRgb),.35);border-radius:8px;font-size:20px;color:#EAFDFF}
+html[data-theme="holo"] .steps b{color:var(--acc);letter-spacing:.06em;text-transform:uppercase}
+html[data-theme="holo"] #setup.boot .card{animation:cardIn .6s cubic-bezier(.2,.9,.3,1.1) backwards}
+html[data-theme="holo"] #setup.boot .stack .card:nth-child(2){animation-delay:.1s}
+html[data-theme="holo"] #setup.boot .grid2>.stack{animation:cardIn .6s .12s cubic-bezier(.2,.9,.3,1.1) backwards}
+@keyframes cardIn{from{opacity:0;transform:perspective(900px) rotateX(14deg) translateY(30px)}to{opacity:1;transform:none}}
+
+/* board + tiles */
+html[data-theme="holo"] .cat{background:rgba(var(--accRgb),.20);border:1px solid rgba(var(--accRgb),.6);border-radius:6px}
+html[data-theme="holo"] .cat b{font-family:var(--body);font-weight:700;font-size:19px;letter-spacing:.05em;text-transform:uppercase;text-shadow:0 0 8px rgba(var(--accRgb),.8)}
+html[data-theme="holo"] .tile{border-width:1px;border-radius:8px;font-weight:700;font-size:42px;text-shadow:0 0 12px rgba(var(--accRgb),.95);
+  background:linear-gradient(160deg,rgba(var(--accRgb),.22),rgba(var(--accRgb),.06))}
+html[data-theme="holo"] .tile:hover:not(:disabled){filter:none;background:linear-gradient(160deg,rgba(var(--accRgb),.5),rgba(var(--accRgb),.16));box-shadow:0 0 28px rgba(var(--accRgb),.9),inset 0 0 22px rgba(var(--accRgb),.35)}
+html[data-theme="holo"] .tile.used{border-style:dashed;background:rgba(255,255,255,.03);text-shadow:none}
+html[data-theme="holo"] .tile.lock{opacity:.4}
+html[data-theme="holo"] .tile .bolt{color:#FFD23F;filter:drop-shadow(0 0 6px #FFD23F)}
+html[data-theme="holo"] .mem.up,html[data-theme="holo"] .sq.on{background:rgba(var(--accRgb),.28);border:1px solid var(--acc);color:#fff;box-shadow:0 0 14px rgba(var(--accRgb),.5)}
+html[data-theme="holo"] .sq{border:1px solid transparent}
+html[data-theme="holo"] .cap{font-size:20px;color:var(--acc)}
+html[data-theme="holo"] .upname{font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-shadow:0 0 12px rgba(var(--accRgb),.8)}
+html[data-theme="holo"] .shp .row{font-size:22px}
+html[data-theme="holo"] .side h4{font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-size:20px}
+html[data-theme="holo"] .sq .nm{font-size:22px}
+html[data-theme="holo"] .bar{box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+html[data-theme="holo"] .bar i{box-shadow:0 0 10px currentColor}
+html[data-theme="holo"] .compact .sq .nm{font-size:18px}
+html[data-theme="holo"] .compact .sq{padding:2px 8px;border:0}
+html[data-theme="holo"] .compact .side{gap:4px;padding:10px 12px}
+html[data-theme="holo"] .compact .side h4{font-size:17px;padding:0 4px}
+
+/* question layer */
+html[data-theme="holo"] .qtext{font-family:var(--body);font-weight:700;font-size:46px;line-height:1.12;text-shadow:0 0 14px rgba(var(--accRgb),.45)}
+html[data-theme="holo"] .qtext.eq{font-family:var(--disp);font-size:62px}
+html[data-theme="holo"] .opt{border-width:1px;border-radius:8px;font-size:40px;background:linear-gradient(160deg,rgba(var(--accRgb),.22),rgba(var(--accRgb),.06));text-shadow:0 0 10px rgba(var(--accRgb),.6)}
+html[data-theme="holo"] .opt:hover:not(:disabled){filter:none;box-shadow:0 0 26px rgba(var(--accRgb),.85),inset 0 0 20px rgba(var(--accRgb),.3)}
+html[data-theme="holo"] .opt b{background:var(--acc);color:#04101E;text-shadow:none;border-radius:8px;font-family:var(--disp);font-weight:700}
+html[data-theme="holo"] .opt.ok{background:rgba(60,240,160,.2);border-color:var(--good);color:#E9FFF5;box-shadow:0 0 26px rgba(60,240,160,.6)}
+html[data-theme="holo"] .opt.ok b{background:var(--good)}
+html[data-theme="holo"] .opt.no{background:rgba(255,107,125,.2);border-color:var(--bad);color:#FFECEF;box-shadow:0 0 26px rgba(255,107,125,.55)}
+html[data-theme="holo"] .opt.no b{background:var(--bad)}
+html[data-theme="holo"] .opt.dim{background:rgba(255,255,255,.03);box-shadow:none;text-shadow:none}
+html[data-theme="holo"] .fb{font-size:25px;border:1px solid rgba(var(--accRgb),.35);border-radius:8px}
+html[data-theme="holo"] .fb h3{font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+html[data-theme="holo"] .note-box{background:rgba(var(--accRgb),.18);border:1px solid var(--acc);color:#fff;font-size:24px;border-radius:8px}
+html[data-theme="holo"] .ring svg{filter:drop-shadow(0 0 8px var(--acc))}
+html[data-theme="holo"] .ring .n b{font-weight:700;text-shadow:0 0 14px var(--acc)}
+html[data-theme="holo"] .big{font-weight:700;text-shadow:0 0 14px var(--acc)}
+html[data-theme="holo"] .pendbar{border:1px solid rgba(var(--accRgb),.5)}
+html[data-theme="holo"] .tgt{border-width:1px;border-radius:8px;box-shadow:0 0 18px var(--tc)}
+html[data-theme="holo"] .tgt b{font-size:26px}
+html[data-theme="holo"] .tgt.sel{outline:3px solid #fff;outline-offset:3px}
+html[data-theme="holo"] .calc{font-size:24px}
+html[data-theme="holo"] .calc td{padding:4px}
+html[data-theme="holo"] .calc td{border-bottom:1px solid rgba(var(--accRgb),.25)}
+html[data-theme="holo"] .stats th{color:var(--acc)}
+html[data-theme="holo"] .stats td,html[data-theme="holo"] .stats th{border-bottom:1px solid rgba(var(--accRgb),.3)}
+
+/* radar grid */
+.sea{position:relative;clip-path:inset(-8px)}
+html[data-theme="holo"] .sea::after{content:'';position:absolute;left:0;right:0;top:0;height:130px;pointer-events:none;will-change:transform;
+  background:linear-gradient(to bottom,transparent,rgba(var(--accRgb),.26),transparent);animation:sweep 3.2s linear infinite}
+@keyframes sweep{from{transform:translateY(-130px)}to{transform:translateY(600px)}}
+html[data-theme="holo"] .sc{border:1px solid rgba(var(--accRgb),.75);border-radius:6px;background:rgba(var(--accRgb),.07);color:#EAFDFF}
+html[data-theme="holo"] .sc:hover:not(:disabled){background:rgba(var(--accRgb),.35);box-shadow:0 0 16px var(--acc)}
+html[data-theme="holo"] .sc.m{background:rgba(255,255,255,.12);border-style:dashed}
+html[data-theme="holo"] .sc.n{background:#FFD98A;color:#2A1A00;box-shadow:0 0 14px #FFD98A}
+html[data-theme="holo"] .sc.h{background:var(--bad);color:#1A0206;border-color:var(--bad);box-shadow:0 0 16px var(--bad)}
+html[data-theme="holo"] .sc.s{background:#05070D;color:#fff;border-color:#fff}
+html[data-theme="holo"] .sea .ax{color:var(--acc)}
+
+/* modal / victory */
+html[data-theme="holo"] .modal,html[data-theme="holo"] #victory{background:rgba(1,4,12,.72)}
+html[data-theme="holo"] .sheet h2,html[data-theme="holo"] .vbox h2{font-weight:700;text-transform:uppercase;letter-spacing:.06em;text-shadow:0 0 14px rgba(var(--accRgb),.8)}
+html[data-theme="holo"] .glist .g{border:1px solid rgba(255,255,255,.35);border-radius:8px}
+
+/* ---------- voice HUD + help ---------- */
+#voiceHud{position:fixed;left:24px;bottom:18px;z-index:150;display:flex;align-items:center;gap:12px;max-width:min(330px,92vw);
+  padding:8px 20px 8px 10px;border-radius:99px;background:rgba(3,10,26,.9);border:1px solid var(--acc);box-shadow:0 0 24px rgba(var(--accRgb),.5);
+  color:#EAFDFF;font-family:var(--body);pointer-events:none}
+#voiceHud .mic{position:relative;flex:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(var(--accRgb),.2);color:var(--acc)}
+#voiceHud.live .mic::after{content:'';position:absolute;inset:-5px;border-radius:50%;border:2px solid var(--acc);animation:micPulse 1.4s ease-out infinite}
+@keyframes micPulse{from{scale:.8;opacity:1}to{scale:1.35;opacity:0}}
+#voiceHud .vt{display:flex;flex-direction:column;min-width:0}
+#voiceHud small{font-size:16px;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#voiceHud b{font-size:22px;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#voiceHud.ok b{color:#6BFFB5}#voiceHud.no b{color:#FFC27A}#voiceHud.err b{color:#FF8A98}
+.vh{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:8px 0 14px}
+@media (max-width:700px){.vh{grid-template-columns:1fr}}
+.vh>div{padding:10px 14px;border-radius:10px;background:var(--pSoft);font-size:19px;line-height:1.35}
+.vh h4{font-family:var(--disp);font-weight:400;font-size:18px;margin-bottom:4px;letter-spacing:.04em}
+.say{display:inline-block;padding:1px 10px;margin:2px 4px 2px 0;border-radius:99px;border:1px solid rgba(128,128,128,.55);font-weight:700;font-size:18px}
+
+@media (prefers-reduced-motion:reduce){
+  #stage,#stage *,#holoBg,#holoBg *,#wipe,.sheet,.vbox,.card,.hdr h1,.proj,.proj *,.sea::after,#voiceHud *{animation:none!important}
+  .opts .opt,.tile.surge{animation:none!important}
+}
+
+/* reduced effects: switched on by the Look toggle, or automatically on a slow computer */
+html.lite #holoBg .floor,html.lite #holoBg .parts,html.lite #holoBg .beam,html.lite #holoBg .sweep,html.lite .sea::after{display:none!important}
+html.lite .proj::before,html.lite .proj::after,html.lite .banner .badge,html.lite .bn-name,html.lite .hdr h1,html.lite .ibtn.live,html.lite .tile.surge{animation:none!important}
+html.lite #stage[data-anim],html.lite #stage[data-anim] *,html.lite #setup .card,html.lite #setup .grid2>.stack,html.lite .opts .opt{animation:none!important}
+html.lite #stage.d3 .tile:hover:not(:disabled){transform:none}
+
+/* stacking order: holoBg(0) < wipe(1) < setup/game(2) < victory(90) < modal(100) < hud(150) < fx(200) */
+#setup{position:relative;z-index:2}
+#game{z-index:2}
+
 </style>
 </head>
 <body>
+<div id="holoBg" aria-hidden="true"><div class="beam b1"></div><div class="beam b2"></div><div class="floor"></div><div class="sweep"></div><div class="parts"></div></div>
+<div id="wipe" aria-hidden="true"></div>
 <main id="setup"></main>
 <div id="game" hidden><div id="stage"></div></div>
 <div id="victory" hidden><div class="vbox" id="vbox" role="dialog" aria-modal="true" aria-label="Final standings"></div></div>
 <div class="modal" id="modal" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div id="voiceHud" hidden aria-live="polite"><div class="mic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div><div class="vt"><small id="vHeard"></small><b id="vAct"></b></div></div>
 <canvas id="fx" aria-hidden="true"></canvas>
 <script>
 /* ============================ core rules (no DOM) ============================ */
@@ -789,6 +1066,358 @@ const dec=r=>({q:r[0],a:r[1],w:r[2].split('|'),exp:r[3]});
 const build=it=>{const opts=shuffle([it.a,...it.w]);return{q:it.q,opts,ans:opts.indexOf(it.a),exp:it.exp};};
 const IDEAS=['10 jumping jacks','Balance on one foot for 10 seconds','5 squats','Hop on one foot 8 times','High knees: 5 on each leg','Freeze like a statue for 5 seconds','Tiptoe to the board and back','Wall sit for 10 seconds','Clap a 4-beat rhythm and have your squad copy it','8 mountain climbers','Bear crawl 5 steps','Stand like a flamingo and count to 10'];
 
+/* ============================ voice: Web Speech API commands + read-aloud ============================
+   Uses the browser's built-in speech recognition (Chrome, Edge, Safari). No library, no API key.
+   Everything it can do is also available by click or key; voice is an extra, never the only way. */
+const Voice=(()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const supported=!!SR;
+  let rec=null,want=false,busy=false,hudTimer=0,restartTimer=0,failStreak=0,msg='',busyTimer=0;
+
+  /* ---------- text helpers ---------- */
+  const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  const ONES={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+  const TENS={twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+  /* "three hundred" -> "300", "forty two" -> "42" (so spoken and written numbers compare equal) */
+  function numberize(s){
+    s=s.replace(/\b(for|fore)\s+hundred\b/g,'four hundred').replace(/\b(to|too)\s+hundred\b/g,'two hundred')
+       .replace(/\bwon\s+hundred\b/g,'one hundred').replace(/\b(tree|free)\s+hundred\b/g,'three hundred')
+       .replace(/\b([1-9])\s+hundred\b/g,'$100');
+    const t=s.split(' '),out=[];
+    for(let i=0;i<t.length;){
+      const w=t[i];
+      if(w in ONES||w in TENS||w==='hundred'||w==='thousand'){
+        let total=0,cur=0,j=i,prev='';
+        for(;j<t.length;j++){
+          const x=t[j];
+          if(x in ONES){if(prev==='ones')break;cur+=ONES[x];prev='ones';}
+          else if(x in TENS){if(prev==='ones'||prev==='tens')break;cur+=TENS[x];prev='tens';}
+          else if(x==='hundred'){cur=(cur||1)*100;prev='hundred';}
+          else if(x==='thousand'){total+=(cur||1)*1000;cur=0;prev='thousand';}
+          else if(x==='and'&&j+1<t.length&&(t[j+1] in ONES||t[j+1] in TENS)&&prev)continue;
+          else break;
+        }
+        out.push(String(total+cur));i=Math.max(j,i+1);
+      }else{out.push(w);i++;}
+    }
+    return out.join(' ');
+  }
+  const SAY={math:['math','maths','mathematics','numbers'],sci:['science','sci'],ela:['language arts','language','reading','english','e l a','ela','arts'],
+             hist:['history and geography','history','geography','social studies','social'],fun:['bonus trivia','bonus','trivia','fun']};
+  function findCat(t){
+    const tt=' '+t+' ';let best=-1,bl=0;
+    CATS.forEach((c,i)=>{(SAY[c.key]||[]).concat([norm(c.name)]).forEach(p=>{if(p.length>bl&&tt.includes(' '+p+' ')){best=i;bl=p.length;}});});
+    return best;
+  }
+  const ROW={a:0,ay:0,eh:0,alpha:0,alfa:0,b:1,be:1,bee:1,bravo:1,c:2,see:2,sea:2,charlie:2,d:3,dee:3,delta:3,e:4,echo:4,f:5,ef:5,eff:5,foxtrot:5,g:6,gee:6,golf:6};
+  const COL={'1':1,one:1,won:1,'2':2,two:2,to:2,too:2,'3':3,three:3,tree:3,'4':4,four:4,for:4,fore:4,'5':5,five:5,'6':6,six:6,'7':7,seven:7};
+  /* "b 4", "bravo four", "bee for", "b4" -> [row, col] (0-based) */
+  function parseCoord(t){
+    let m=t.match(/\b([a-g])\s?([1-7])\b/);
+    if(m)return['abcdefg'.indexOf(m[1]),+m[2]-1];
+    const tok=t.split(' ');
+    for(let i=0;i<tok.length;i++){
+      const l=ROW[tok[i]];if(l==null)continue;
+      for(let j=i+1;j<=i+2&&j<tok.length;j++){const d=COL[tok[j]];if(d!=null)return[l,d-1];}
+    }
+    for(let i=0;i<tok.length-1;i++){const d=COL[tok[i]],l=ROW[tok[i+1]];if(d!=null&&l!=null)return[l,d-1];}
+    return null;
+  }
+  const LET={a:0,ay:0,eh:0,alpha:0,b:1,be:1,bee:1,bravo:1,c:2,see:2,sea:2,charlie:2,d:3,dee:3,delta:3};
+  const HOMO={to:'2',too:'2',for:'4',fore:'4',won:'1',ate:'8',tree:'3'};
+  /* which option (0-3) did they mean? letter, "option C", "number 2", or the answer text itself */
+  const SPOKEN_MATH=/\b(equals|equal|plus|minus|times|divided by|over|point|percent|dollars|dollar|degrees|degree|squared|cubed)\b/g;
+  function parseAnswer(t,q){
+    t=t.replace(SPOKEN_MATH,' ').replace(/\s+/g,' ').trim();
+    const opts=q.opts.map(o=>numberize(norm(o)));
+    let m=t.match(/\b(?:option|choice|number|answer|letter)\s+([1-4])\b/);if(m)return+m[1]-1;
+    m=t.match(/\b(?:option|choice|answer|letter|pick|select|choose)\s+(?:is\s+)?(a|ay|eh|b|be|bee|c|see|sea|d|dee|alpha|bravo|charlie|delta)\b/);if(m)return LET[m[1]];
+    const stripped=t.replace(/\b(the|answer|is|it|its|i|say|think|choose|pick|select|final|lock|in|please|um|uh|my|its)\b/g,' ').replace(/\s+/g,' ').trim();
+    if(!stripped&&!t)return-1;
+    const homo=stripped.split(' ').map(w=>HOMO[w]||w).join(' ');
+    for(const cand of [t,stripped,homo]){
+      if(!cand)continue;
+      const hits=[];opts.forEach((o,i)=>{if(o===cand)hits.push(i);});
+      if(hits.length===1)return hits[0];
+    }
+    const tok=stripped.split(' ').filter(Boolean);
+    if(tok.length&&tok.length<=2){for(const w of tok)if(w in LET)return LET[w];}
+    let hits=[];opts.forEach((o,i)=>{if(o&&(' '+stripped+' ').includes(' '+o+' '))hits.push(i);});
+    if(hits.length===1)return hits[0];
+    hits=[];opts.forEach((o,i)=>{if(stripped.length>=3&&(' '+o+' ').includes(' '+stripped+' '))hits.push(i);});
+    if(hits.length===1)return hits[0];
+    return-1;
+  }
+  /* squad by name: any word of the name works; "s one" matches "S1"; "team 3" = third squad */
+  function matchTeam(t,foes){
+    const tt=' '+t+' ',comp=t.replace(/\s+/g,'');
+    const hits=[];
+    foes.forEach(f=>{
+      const nm=norm(f.name);if(!nm)return;
+      if(tt.includes(' '+nm+' ')){hits.push({f,s:100+nm.length});return;}
+      const words=nm.split(' ').filter(w=>w.length>=3);
+      const got=words.filter(w=>tt.includes(' '+w+' ')||tt.includes(' '+w+'s '));
+      if(got.length){hits.push({f,s:got.join('').length});return;}
+      const c=nm.replace(/\s+/g,'');
+      if(c.length<=4&&comp.includes(c))hits.push({f,s:2});
+    });
+    if(!hits.length){
+      const m=t.match(/\b(?:team|squad|group|number)\s+(\d{1,2})\b/);
+      if(m){const f=G.teams[+m[1]-1];if(f&&foes.includes(f))return{f};}
+      return null;
+    }
+    hits.sort((a,b)=>b.s-a.s);
+    const top=hits.filter(h=>h.s===hits[0].s);
+    return top.length>1?{amb:top.map(h=>h.f)}:{f:top[0].f};
+  }
+
+  /* ---------- acting on the screen (always through the same buttons a click would use) ---------- */
+  const click=sel=>{const b=$(sel);if(b&&!b.disabled){b.click();return true;}return false;};
+  const answered=()=>!!$('#fbHost .fb button');
+  const primary=()=>$('#fbHost .fb button')||$('#fireOut > button')||$('[data-act="done"]');
+  const NEXT=/\b(next|continue|okay|ok|go on|keep going|proceed|done|move on|next turn|next team)\b/;
+  function nextCmd(t){
+    if(NEXT.test(t)){const b=primary();if(b&&!b.disabled){b.click();return'Next';}}
+    return null;
+  }
+  function ctx(){
+    if(!$('#modal').hidden)return'modal';
+    if(!$('#victory').hidden)return'victory';
+    if(!G)return'setup';
+    if(!S)return'board';
+    return S.step;
+  }
+
+  const handlers={
+    setup(t){
+      if(/\b(start|begin|launch)\b.*\b(battle|game|play)\b|^(start|begin)$|\blet s (go|play)\b/.test(t)&&click('[data-act="start"]'))return'Starting the battle';
+      if((/\b(continue|resume)\b.*\b(battle|game)\b|^(continue|resume)$/.test(t))&&click('[data-act="resume"]'))return'Continuing the battle';
+      return null;
+    },
+    board(t){
+      if(/\b(random|surprise|pick one|pick for me|you pick|any tile|anything)\b/.test(t)){
+        const open=$$('.tile:not(.used):not(:disabled)');
+        if(open.length){const b=pick(open);b.click();return'Random tile';}
+        return{no:'No tiles left'};
+      }
+      const ci=findCat(t);let row=-1;
+      let m=t.match(/\b([1-5])00\b/);
+      if(m)row=+m[1]-1;else{m=t.match(/\b(?:row|level|tier)\s*([1-5])\b/);if(m)row=+m[1]-1;}
+      if(ci>=0&&row>=0){
+        const b=$(`.tile[data-ci="${ci}"][data-r="${row}"]`);if(!b)return null;
+        if(b.disabled)return{no:`${CATS[ci].name} ${(row+1)*100} is already used`};
+        b.click();return`${CATS[ci].name} ${(row+1)*100}`;
+      }
+      if(ci>=0)return{no:`Add a number: "${CATS[ci].name} 300"`};
+      if(row>=0)return{no:`Add a subject: "Math ${(row+1)*100}"`};
+      return null;
+    },
+    target(t){
+      const foes=G.teams.filter(x=>x!==S.atk&&x.alive);
+      const m=matchTeam(t,foes);
+      if(!m&&/\b(cancel|back|go back|back to the board|never mind|nevermind)\b/.test(t)&&click('[data-act="cancel-strike"]'))return'Back to the board';
+      if(m&&m.amb)return{no:'Which squad? '+m.amb.map(f=>f.name).join(' or ')};
+      const lock=/\b(lock|lock on|lock in|confirm|engage|yes|go)\b/.test(t);
+      if(m&&m.f){
+        click(`.tgt[data-i="${G.teams.indexOf(m.f)}"]`);
+        if(lock){click('[data-act="lock"]');return'Locked on '+m.f.name;}
+        return'Target: '+m.f.name;
+      }
+      if(lock&&S.target&&click('[data-act="lock"]'))return'Locked on '+S.target.name;
+      return null;
+    },
+    challenge(t){
+      if(/\b(another|new idea|different|skip)\b/.test(t)&&click('[data-act="idea"]'))return'New idea';
+      if(/\b(missed|miss|failed|fail|didn t|didnt|did not|nope|no|not done|couldn t|could not)\b/.test(t)&&click('[data-act="chal-no"]'))return'Challenge missed';
+      if(/\b(completed|complete|done|did it|nailed it|success|passed|yes|finished|good job)\b/.test(t)&&click('[data-act="chal-ok"]'))return'Challenge complete';
+      return null;
+    },
+    ammo(t,c){return handlers.question(t,c);},
+    repair(t,c){return handlers.question(t,c);},
+    question(t,c){
+      if(answered())return nextCmd(t);
+      const pb=$('#tpause');
+      if(/\b(pause|hold on|freeze|stop the (timer|clock))\b/.test(t)&&pb&&pb.getAttribute('aria-pressed')!=='true'){pb.click();return'Timer paused';}
+      if(/\b(resume|unpause|start the (timer|clock))\b/.test(t)&&pb&&pb.getAttribute('aria-pressed')==='true'){pb.click();return'Timer running';}
+      if(/\b(more time|add (some )?time|extra time|plus 15|add 15|15 more)\b/.test(t)&&click('#tplus'))return'+15 seconds';
+      const q=c==='repair'?S.replQ:S.ammoQ;if(!q)return null;
+      const i=parseAnswer(t,q);
+      if(i>=0){const b=$$('#qopts .opt')[i];if(b&&!b.disabled){b.click();return'Answer '+'ABCD'[i];}}
+      return null;
+    },
+    fire(t){
+      if($('#fireOut > button'))return nextCmd(t);
+      if(/\b(random|surprise|anywhere|you pick|pick for me|any square)\b/.test(t)){
+        const open=$$('#sea .sc:not(:disabled)');if(open.length){pick(open).click();return'Random shot';}
+      }
+      const co=parseCoord(t);
+      if(co){
+        const b=$$('#sea .sc')[co[0]*7+co[1]],name='ABCDEFG'[co[0]]+(co[1]+1);
+        if(!b)return null;
+        if(b.disabled)return{no:name+' was already fired on'};
+        b.click();return'Fire '+name;
+      }
+      return null;
+    },
+    result(t){return nextCmd(t);},
+    victory(t){
+      if(/\b(rematch|play again|again|new game|one more)\b/.test(t)&&click('[data-act="rematch"]'))return'Rematch';
+      if(/\b(back|setup|settings|home|menu)\b/.test(t)&&click('[data-act="back"]'))return'Back to setup';
+      return null;
+    },
+    modal(t){
+      if(/\bkeep playing\b|\b(keep|continue) (going|playing)\b/.test(t)&&click('[data-act="e-keep"]'))return'Keep playing';
+      if(/\b(standings|ranking|rank|scores)\b/.test(t)&&click('[data-act="e-rank"]'))return'Showing standings';
+      if(/\bsave\b/.test(t)&&click('[data-act="e-save"]'))return'Saved';
+      if(/\b(leave|quit|exit|discard)\b/.test(t)&&click('[data-act="e-quit"]'))return'Leaving';
+      if(/\b(close|cancel|never mind|nevermind|dismiss|okay|ok|got it)\b/.test(t)){closeModal();return'Closed';}
+      return null;
+    }
+  };
+  function globalCmd(t,c){
+    if(/\b(stop listening|stop voice|voice off|mute (the )?(mic|microphone)|turn off (the )?(mic|microphone|voice)|stop the mic)\b/.test(t)){stop();return'Mic off';}
+    if(/\b(help|what can i say|voice commands|show commands)\b/.test(t)&&c!=='modal'){help();return'Voice commands';}
+    if(/\b(sound|sounds|music|volume) off\b|\bmute (the )?(sound|sounds|game)\b/.test(t)){if(Snd.on)toggleSound();return'Sound off';}
+    if(/\b(sound|sounds) on\b|\bunmute\b/.test(t)){if(!Snd.on)toggleSound();return'Sound on';}
+    if(/\b(next|change|switch|new|different) (theme|look|skin)\b/.test(t)){cycleTheme();return'Next theme';}
+    if((c==='ammo'||c==='repair')&&/\bread (the )?(question|it|that|again|aloud|out loud)\b|\brepeat (the )?(question|that|it)\b/.test(t)){readQuestion();return'Reading the question';}
+    if((c==='board'||c==='setup')&&/\b(end|finish) (the )?game\b/.test(t)&&G){openEnd();return'End game?';}
+    return null;
+  }
+
+  /* one spoken phrase in -> {ok, act, kind} out */
+  function handle(raw){
+    let t=norm(raw);
+    if(!t)return{ok:false,act:''};
+    if(setup&&setup.cfg&&setup.cfg.wake){
+      const m=t.match(/^(?:hey |ok |okay )?(?:computer|zynth|synth|zenith|zinth|sinth)\b\s*/);
+      if(!m)return{ok:false,act:'',skip:true};
+      t=t.slice(m[0].length);
+      if(!t)return{ok:true,act:'Yes?'};
+    }
+    t=numberize(t);
+    const c=ctx();
+    let r=globalCmd(t,c);
+    if(r==null&&handlers[c])r=handlers[c](t,c);
+    if(r==null)return{ok:false,act:''};
+    if(typeof r==='object')return{ok:false,act:r.no,kind:'no'};
+    return{ok:true,act:r};
+  }
+
+  /* ---------- on-screen status ---------- */
+  function hud(heard,act,kind){
+    const h=$('#voiceHud');if(!h)return;
+    h.hidden=false;h.className=(want?'live ':'')+(kind||'');
+    $('#vHeard').textContent=heard||'';$('#vAct').textContent=act||'';
+    clearTimeout(hudTimer);
+    hudTimer=setTimeout(()=>{h.hidden=true;},kind==='err'?6000:3800);
+  }
+  /* shown once when the mic is switched on; after that only the glowing mic button stays (so it never covers the board) */
+  function startHud(){
+    if(!want)return;
+    hud(setup.cfg.wake?'Say "computer", then a command':'Listening','Say "help" for commands','ok');
+  }
+  function paint(){
+    $$('[data-act="voice"]').forEach(b=>{
+      b.classList.toggle('live',want);b.setAttribute('aria-pressed',String(want));
+      const l=$('.vlab',b);if(l)l.textContent=want?'Voice on':'Voice off';
+    });
+  }
+
+  /* ---------- the microphone ---------- */
+  function build(){
+    rec=new SR();
+    rec.continuous=true;rec.interimResults=true;rec.lang='en-US';rec.maxAlternatives=3;
+    rec.onstart=()=>{failStreak=0;paint();};
+    rec.onresult=e=>{
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const r=e.results[i];
+        if(!r.isFinal){if(!busy)hud('“'+r[0].transcript.trim()+'…”','','');continue;}
+        if(busy)continue;
+        const heard=r[0].transcript.trim();let best=null;
+        for(let k=0;k<r.length;k++){
+          const x=handle(r[k].transcript);
+          if(x.ok){best=x;break;}
+          if(!best||(!best.act&&x.act)||(best.skip&&!x.skip))best=x;
+        }
+        if(best&&best.ok)hud('“'+heard+'”','✓ '+best.act,'ok');
+        else if(best&&best.skip)hud('“'+heard+'”','Waiting for the wake word','');
+        else if(best&&best.act)hud('“'+heard+'”',best.act,'no');
+        else hud('“'+heard+'”','Not a command. Say "help"','no');
+      }
+    };
+    rec.onerror=e=>{
+      const er=e.error;
+      if(er==='not-allowed'||er==='service-not-allowed'){want=false;msg='The mic is blocked. Allow the microphone for this page, and open the game from its web link (a preview window may block it).';}
+      else if(er==='audio-capture'){want=false;msg='No microphone found.';}
+      else if(er==='network'){failStreak++;msg='Speech service unreachable. It needs the internet.';if(failStreak>3)want=false;}
+    };
+    rec.onend=()=>{
+      paint();
+      if(want){clearTimeout(restartTimer);restartTimer=setTimeout(()=>{try{rec.start();}catch(err){}},350);}
+      else if(msg){hud('',msg,'err');msg='';}
+    };
+  }
+  function start(){
+    if(!supported){hud('','Voice needs Chrome, Edge or Safari','err');return false;}
+    want=true;msg='';
+    if(!rec)build();
+    try{rec.start();}catch(e){/* already running */}
+    paint();startHud();return true;
+  }
+  function stop(){
+    want=false;clearTimeout(restartTimer);
+    try{rec&&rec.stop();}catch(e){}
+    paint();hud('','Mic off','');
+  }
+  const toggle=()=>{want?stop():start();};
+
+  /* ---------- talking back: read-aloud + optional computer-voice callouts ---------- */
+  const speakable=s=>String(s)
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,' ')
+    .replace(/×/g,' times ').replace(/÷/g,' divided by ').replace(/−/g,' minus ').replace(/\+/g,' plus ').replace(/=/g,' equals ')
+    .replace(/²/g,' squared').replace(/³/g,' cubed').replace(/√/g,' square root of ').replace(/%/g,' percent').replace(/\s+/g,' ');
+  function say(text,force){
+    if(!('speechSynthesis' in window))return;
+    if(!force&&!(setup&&setup.cfg&&setup.cfg.callouts))return;
+    try{
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(speakable(text));
+      u.rate=1.02;u.pitch=.95;
+      busy=true;clearTimeout(busyTimer);busyTimer=setTimeout(()=>{busy=false;},15000);
+      const free=()=>{clearTimeout(busyTimer);busyTimer=setTimeout(()=>{busy=false;},450);};
+      u.onend=free;u.onerror=free;
+      speechSynthesis.speak(u);
+    }catch(e){busy=false;}
+  }
+  function readQuestion(){
+    if(!S)return;
+    const q=S.step==='repair'?S.replQ:S.ammoQ;if(!q)return;
+    const opts=answered()?'':q.opts.map((o,i)=>'ABCD'[i]+'. '+o).join('. ');
+    say(q.q+'. '+opts,true);
+  }
+
+  function help(){
+    const s=t=>`<span class="say">${t}</span>`;
+    openModal(`<h2>Voice commands</h2>
+      <p class="note" style="margin-bottom:8px">Click the mic button, allow the microphone, then speak. Everything also works by clicking or with the keyboard.</p>
+      <div class="vh">
+        <div><h4>Pick a tile</h4>${s('Math 300')}${s('Science four hundred')}${s('History 200')}${s('Language arts 500')}${s('Bonus 100')}${s('Random tile')}</div>
+        <div><h4>Choose a target</h4>${s('Blue Barracudas')} (any word in the name works) ${s('Lock on')}${s('Back')}</div>
+        <div><h4>Challenge</h4>${s('Completed')}${s('Missed')}${s('Another idea')}</div>
+        <div><h4>Answer</h4>${s('A')}${s('B')}${s('C')}${s('D')}${s('Option C')} or say the answer itself</div>
+        <div><h4>Fire</h4>${s('Fire B 4')}${s('Alpha three')}${s('Random shot')}</div>
+        <div><h4>Keep going</h4>${s('Next')}${s('Read the question')}${s('Pause')}${s('Resume')}${s('More time')}</div>
+        <div><h4>Anytime</h4>${s('Next theme')}${s('Sound off')}${s('Help')}${s('Stop listening')}</div>
+        <div><h4>Good to know</h4>Speak after the mic pulses. Squads named like S1 work: say "S one". Turn on the wake word in Look to ignore classroom chatter. Chrome and Edge send voice to a cloud speech service.</div>
+      </div>
+      <button class="btn block" data-act="e-keep">Got it</button>`);
+  }
+
+  const note=(text)=>hud('',text,'ok');
+  return{get on(){return want;},supported,note,start,stop,toggle,handle,say,readQuestion,help,paint,_t:{norm,numberize,parseCoord,parseAnswer,findCat,matchTeam,ctx}};
+})();
+
 /* ============================ Battleship Jeopardy v2: app ============================ */
 "use strict";
 
@@ -843,6 +1472,12 @@ const CLIP={
   pentagon:'polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)',octagon:'polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)'
 };
 const THEMES={
+  holo:{name:'Holo Deck',base:'#12B5E5',glow:true,good:'#3CF0A0',bad:'#FF6B7D',disp:"'Orbitron','Arial Black',sans-serif",body:"'Rajdhani','Trebuchet MS',sans-serif",
+    panel:'rgba(3,10,26,0.70)',pInk:'#E8FBFF',line:'var(--acc)',lw:1,r:8,sh:'0 0 26px rgba(var(--accRgb),0.38), inset 0 0 36px rgba(var(--accRgb),0.10)',
+    head:'rgba(var(--accRgb),0.22)',headInk:'#F2FDFF',tile:'rgba(var(--accRgb),0.13)',tileInk:'#EAFDFF',tline:'rgba(var(--accRgb),0.85)',
+    tsh:'0 0 14px rgba(var(--accRgb),0.35), inset 0 0 18px rgba(var(--accRgb),0.12)',used:'rgba(255,255,255,0.04)',usedInk:'rgba(230,250,255,0.45)',
+    btn:'var(--acc)',btnInk:'#04101E',veil:[3,8,22,0.44],
+    layers:[{img:'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',size:'64px 64px'},{img:'linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',size:'64px 64px'}]},
   arcade:{name:'Arcade Harbor',base:'#2E9BE6',disp:"'Bungee','Arial Black',sans-serif",body:"'Fredoka','Trebuchet MS',sans-serif",
     panel:'#FFFFFF',pInk:'#10264A',line:'#10264A',lw:3,r:20,sh:'0 6px 0 #10264A',head:'#10264A',headInk:'#FFFFFF',tile:'#FFC62E',tileInk:'#10264A',tline:'#10264A',tsh:'0 4px 0 #10264A',used:'#D6E2EF',usedInk:'#5B7396',btn:'#26C46B',btnInk:'#10264A',veil:null,
     layers:[{img:'radial-gradient(circle at 50% 100%, rgba(255,255,255,0.30) 0 34px, transparent 35px)',pos:'0 100%',size:'96px 48px',rep:'repeat-x'},{img:'radial-gradient(circle at 50% 100%, rgba(16,38,74,0.18) 0 34px, transparent 35px)',pos:'48px 100%',size:'96px 62px',rep:'repeat-x'}]},
@@ -871,33 +1506,49 @@ const rgbaStr=(v,a)=>'rgba('+v[0]+','+v[1]+','+v[2]+','+a+')';
 const rgbHex=v=>'#'+v.map(c=>c.toString(16).padStart(2,'0')).join('');
 const mixVeil=(v,w)=>w?v.map((c,i)=>Math.round(c*(1-w[3])+w[i]*w[3])):v;
 const fillFor=p=>p>55?'#22B35E':p>25?'#F2B01E':'#E5484D';
+let prevBg=null;
+function irisWipe(oldBg){
+  const w=$('#wipe');if(!w)return;
+  w.style.background=oldBg;w.classList.remove('go');void w.offsetWidth;w.classList.add('go');
+  clearTimeout(irisWipe.t);irisWipe.t=setTimeout(()=>w.classList.remove('go'),800);
+}
+const irisOK=()=>!matchMedia('(prefers-reduced-motion: reduce)').matches&&(!G||G.cfg.d3);
 function applyTheme(key,color){
   const T=THEMES[key]||THEMES.arcade,r=document.documentElement.style;
-  const bgRgb=mixVeil(hexRgb(color),T.veil),ink=rgbInk(bgRgb),inkRgb=hexRgb(ink),pRgb=hexRgb(T.pInk);
+  const base=hexRgb(color),bgRgb=mixVeil(base,T.veil),ink=rgbInk(bgRgb),inkRgb=hexRgb(ink),pRgb=hexRgb(T.pInk);
+  const acc=base.map(c=>Math.round(c+(255-c)*0.5));
   const layerCss=l=>l.img+' '+(l.pos||'0 0')+(l.size?' / '+l.size:'')+' '+(l.rep||'repeat');
   const veil=T.veil?['linear-gradient(rgba('+T.veil.join(',')+'), rgba('+T.veil.join(',')+'))']:[];
+  const glow=T.glow?['radial-gradient(ellipse 130% 85% at 50% 92%, '+rgbaStr(base,0.74)+', transparent 78%)']:[];
+  const bgCss=T.layers.map(layerCss).concat(glow).concat(veil).concat([color]).join(', ');
+  if(prevBg&&prevBg!==bgCss&&document.body.classList.contains('playing')&&irisOK())irisWipe(prevBg);
+  prevBg=bgCss;
   const set=(k,v)=>r.setProperty(k,v);
-  set('--bg',T.layers.map(layerCss).concat(veil).concat([color]).join(', '));
+  set('--bg',bgCss);
   set('--disp',T.disp);set('--body',T.body);set('--panel',T.panel);set('--pInk',T.pInk);set('--line',T.line);set('--lw',T.lw+'px');set('--r',T.r+'px');set('--sh',T.sh);
   set('--head',T.head);set('--headInk',T.headInk);set('--tile',T.tile);set('--tileInk',T.tileInk);set('--tline',T.tline);set('--tsh',T.tsh);
   set('--used',T.used);set('--usedInk',T.usedInk);set('--btn',T.btn);set('--btnInk',T.btnInk);
   set('--ink',ink);set('--inkRgb',inkRgb.join(','));set('--bgHex',rgbHex(bgRgb));
   set('--soft',rgbaStr(inkRgb,0.14));set('--softLine',rgbaStr(inkRgb,0.28));set('--pSoft',rgbaStr(pRgb,0.08));
+  set('--acc',rgbHex(acc));set('--accRgb',acc.join(','));
+  set('--good',T.good||'#1F9D55');set('--bad',T.bad||'#D64545');
+  document.documentElement.dataset.theme=key;
   return{T,ink,bgHex:rgbHex(bgRgb)};
 }
 
 /* ---------- classes and saved setup (this device) ---------- */
-const DEF_CFG={hp:800,timer:30,challenge:true,repairPct:100,lastChance:true,hints:true,mix:true,end:'board',vol:.85,theme:'arcade',surprise:false};
+const DEF_CFG={hp:800,timer:30,challenge:true,repairPct:100,lastChance:true,hints:true,mix:true,end:'board',vol:.85,theme:'holo',surprise:false,d3:true,fx:true,callouts:false,wake:false,v4:true};
 let meta=store.get('bj3-meta',null);
 if(!meta||!Array.isArray(meta.list)||!meta.list.length)meta={current:'Class 1',list:['Class 1']};
 const ck=k=>'bj3-'+k+'-'+meta.current;
 const saveMeta=()=>store.set('bj3-meta',meta);
 function defaultSetup(){return{teams:[0,1,2,3].map(i=>({name:defaultName(i),grade:3,members:[]})),cfg:{...DEF_CFG}};}
+function migrateCfg(c){const cfg=Object.assign({},DEF_CFG,c);if(!(c&&c.v4)){cfg.theme='holo';cfg.v4=true;}return cfg;}
 function loadSetup(){
   const s=store.get(ck('setup'),null);
   try{
     if(s&&Array.isArray(s.teams)&&s.teams.length>=2&&s.teams.length<=MAX_TEAMS){
-      return{teams:s.teams.map(t=>({name:String(t.name||''),grade:Math.max(0,Math.min(10,+t.grade||0)),members:Array.isArray(t.members)?t.members.map(String):[]})),cfg:Object.assign({},DEF_CFG,s.cfg)};
+      return{teams:s.teams.map(t=>({name:String(t.name||''),grade:Math.max(0,Math.min(10,+t.grade||0)),members:Array.isArray(t.members)?t.members.map(String):[]})),cfg:migrateCfg(s.cfg)};
     }
   }catch(e){}
   return defaultSetup();
@@ -918,8 +1569,11 @@ function closeModal(){$('#modal').hidden=true;$('#sheet').innerHTML='';if(lastFo
 /* ============================ setup screen ============================ */
 const seg=(name,vals,cur,fmt)=>`<div class="seg" role="group">${vals.map(v=>`<button type="button" data-set="${name}" data-v="${v}" aria-pressed="${String(cur)===String(v)}">${fmt?fmt(v):v}</button>`).join('')}</div>`;
 const tgl=(id,label,on)=>`<label class="tgl"><span>${label}</span><input type="checkbox" id="${id}" ${on?'checked':''}><span class="tr"><i></i></span></label>`;
+let setupBooted=false;
 function renderSetup(){
   const c=setup.cfg,th=THEMES[c.theme]||THEMES.arcade;
+  applyFx();
+  $('#setup').classList.toggle('boot',!setupBooted);setupBooted=true;
   applyTheme(c.theme,th.base);
   document.body.classList.remove('playing');
   const sv=store.get(ck('save'),null);
@@ -932,7 +1586,7 @@ function renderSetup(){
     <div class="hdr"><h1>Battleship Jeopardy</h1><div class="row">
       <label class="sr" for="clsSel">Class</label>
       <select id="clsSel" style="width:auto;min-width:180px">${meta.list.map(n=>`<option value="${esc(n)}" ${n===meta.current?'selected':''}>${esc(n)}</option>`).join('')}<option value="__new">＋ New class…</option></select>
-      <button class="ibtn wide" data-act="sound">Sound ${Snd.on?'on':'off'}</button>
+      <button class="ibtn wide${Voice.on?' live':''}" data-act="voice" aria-pressed="${Voice.on}">${ICON.mic}<span class="vlab">Voice ${Voice.on?'on':'off'}</span></button><button class="ibtn wide" data-act="sound">Sound ${Snd.on?'on':'off'}</button>
     </div></div>
     <p class="hero">Answer to load your ammo. Land a shot on a hidden fleet. When your ship takes a hit, answer to repair the damage.</p>
     ${resume}
@@ -957,6 +1611,11 @@ function renderSetup(){
         <div class="card"><h3>Look</h3>
           <div class="themes">${THEME_KEYS.map(k=>{const t=THEMES[k];return`<button type="button" class="th" data-set="theme" data-v="${k}" aria-pressed="${c.theme===k}"><i style="background:linear-gradient(90deg,${t.base} 0 60%,${t.btn} 60% 100%)"></i>${t.name}</button>`;}).join('')}</div>
           ${tgl('tSurp','Surprise me: a new theme each game',c.surprise)}
+          ${tgl('tD3','3D camera and zoom animations',c.d3)}
+          ${tgl('tFx','Animated hologram background',c.fx)}
+          ${tgl('tCall','Computer voice callouts',c.callouts)}
+          ${tgl('tWake','Voice needs the wake word "computer"',c.wake)}
+          <button class="btn sm ghost block" data-act="vhelp" style="margin-top:8px">See voice commands</button>
         </div>
         <button class="btn lg block" data-act="start">Start the battle</button>
       </div>
@@ -1060,7 +1719,7 @@ function log(m,c=''){G.log.unshift({m,c});if(G.log.length>120)G.log.pop();}
 function newSurge(){G.surge=R(0,CATS.length-1)+'-'+R(0,ROWS-1);}
 function fit(){document.documentElement.style.setProperty('--s',Math.min(innerWidth/1440,innerHeight/900));}
 addEventListener('resize',fit);
-function showGame(on){$('#setup').hidden=on;$('#game').hidden=!on;document.body.classList.toggle('playing',on);if(on){fit();window.scrollTo(0,0);}}
+function showGame(on){$('#setup').hidden=on;$('#game').hidden=!on;document.body.classList.toggle('playing',on);if(on){fit();window.scrollTo(0,0);lastView=null;probeSpeed();}}
 
 function startGame(){
   saveSetup();
@@ -1084,6 +1743,7 @@ function resumeGame(){
     if(!s||!s.G||!Array.isArray(s.G.teams)||s.G.teams.length<2)throw 0;
     G={...s.G,used:new Set(s.G.used||[]),usedQ:new Set(s.G.usedQ||[]),over:false};
     if(G.teams.some(t=>!Array.isArray(t.ships)||!Array.isArray(t.map)))throw 0;
+    if(!G.cfg.v4){G.theme='holo';G.cfg.d3=true;G.cfg.v4=true;}
     S=null;
   }catch(e){store.del(ck('save'));G=null;renderSetup();return;}
   $('#victory').hidden=true;showGame(true);renderGame();
@@ -1113,6 +1773,7 @@ function resolveRepair(t,si,ok,taken,pct){
 
 /* ============================ rendering: turn screen ============================ */
 const ICON={
+  mic:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
   sound:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
   mute:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
   theme:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.6 0 2-1 1.6-2-.5-1.2.3-2.5 1.7-2.5H17a4 4 0 0 0 4-4C21 6.9 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>',
@@ -1120,12 +1781,13 @@ const ICON={
   bolt:'<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/></svg>',
   check:'<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
 };
+const micBtn=()=>`<button class="ibtn${Voice.on?' live':''}" data-act="voice" aria-pressed="${Voice.on}" aria-label="Voice commands ${Voice.on?'on':'off'}">${ICON.mic}</button>`;
 const topBar=chip=>`<div class="top"><div class="l"><div class="brand">Battleship Jeopardy</div><span class="chip">${esc(G.className)} · ${chip}</span><span class="chip">${esc(THEMES[G.theme].name)}</span></div>
-  <div class="r"><button class="ibtn" data-act="sound" aria-label="${Snd.on?'Sound on':'Sound off'}">${Snd.on?ICON.sound:ICON.mute}</button><button class="ibtn" data-act="theme" aria-label="Change theme">${ICON.theme}</button><button class="ibtn" data-act="end" aria-label="End or leave this game">${ICON.flag}</button></div></div>`;
+  <div class="r">${micBtn()}<button class="ibtn" data-act="sound" aria-label="${Snd.on?'Sound on':'Sound off'}">${Snd.on?ICON.sound:ICON.mute}</button><button class="ibtn" data-act="theme" aria-label="Change theme">${ICON.theme}</button><button class="ibtn" data-act="end" aria-label="End or leave this game">${ICON.flag}</button></div></div>`;
 const badgeHtml=(t,size,fs,extra='')=>`<div class="badge" style="width:${size}px;height:${size}px;clip-path:${CLIP[t.shape]};background:${extra||'var(--ink)'};color:${extra?inkFor(t.color):'var(--bgHex)'};font-size:${t.letter.length>1?Math.round(fs*0.74):fs}px"><span style="padding-top:${t.shape==='triangle'?Math.round(size*.15):t.shape==='star'?Math.round(size*.06):0}px">${esc(t.letter)}</span></div>`;
 function bannerHtml(t,sub){
-  const fs=Math.max(36,Math.min(76,Math.floor(1230/(Math.max(6,t.name.length)*0.92))));
-  return`<div class="banner">${badgeHtml(t,96,46)}<div style="min-width:0"><div class="bn-name" style="font-size:${fs}px">${esc(t.name)}</div><div class="bn-sub">${sub}</div></div></div>`;
+  const fs=Math.max(36,Math.min(76,Math.floor(1230/(Math.max(6,t.name.length)*1.02))));
+  return`<div class="banner"><div class="proj">${badgeHtml(t,96,46)}</div><div style="min-width:0"><div class="bn-name" style="font-size:${fs}px">${esc(t.name)}</div><div class="bn-sub">${sub}</div></div></div>`;
 }
 function shipsHtml(t){
   return t.ships.map(s=>{
@@ -1144,7 +1806,7 @@ function boardHtml(){
   let h=CATS.map(c=>`<div class="cat"><b>${esc(c.name)}</b></div>`).join('');
   for(let r=0;r<ROWS;r++)for(let c=0;c<CATS.length;c++){
     const k=c+'-'+r,used=G.used.has(k),surge=G.surge===k&&!used;
-    h+=`<button type="button" class="tile${used?' used':''}${S&&!used?' lock':''}" data-act="tile" data-ci="${c}" data-r="${r}" ${used||G.over||S?'disabled':''} aria-label="${esc(CATS[c].name)}, ${(r+1)*100} points${used?', already answered':surge?', power surge':''}">${used?ICON.check:(r+1)*100}${surge?`<span class="bolt">${ICON.bolt}</span>`:''}</button>`;
+    h+=`<button type="button" class="tile${used?' used':''}${S&&!used?' lock':''}${surge?' surge':''}" style="--i:${r*CATS.length+c}" data-act="tile" data-ci="${c}" data-r="${r}" ${used||G.over||S?'disabled':''} aria-label="${esc(CATS[c].name)}, ${(r+1)*100} points${used?', already answered':surge?', power surge':''}">${used?ICON.check:(r+1)*100}${surge?`<span class="bolt">${ICON.bolt}</span>`:''}</button>`;
   }
   return`<section class="board">${h}</section>`;
 }
@@ -1158,10 +1820,32 @@ function turnHtml(){
   const left=TILES-G.used.size,lim=G.cfg.end==='board'?1:G.cfg.end==='two'?2:0;
   return topBar(`Board ${G.round}${lim?' of '+lim:''} · ${left} tile${left===1?'':'s'} left`)+bannerHtml(t,'Pick a tile!')+`<div class="cols">${leftHtml(t)}${boardHtml()}${standingsHtml()}</div>`;
 }
+/* effects level: the Look toggle, or automatic if this computer is too slow to animate smoothly */
+let autoLite=false,probed=false;
+function applyFx(){document.documentElement.classList.toggle('lite',!setup.cfg.fx||autoLite);}
+function probeSpeed(){
+  if(probed||navigator.webdriver||!setup.cfg.fx)return;
+  probed=true;
+  let n=0,t0=0;
+  setTimeout(()=>{requestAnimationFrame(function f(t){if(!t0)t0=t;n++;if(t-t0<2200)requestAnimationFrame(f);else{
+    const fps=n/((t-t0)/1000);
+    if(fps<22){autoLite=true;applyFx();Voice.note('Slow computer: effects reduced. You can change this in Look.');}
+  }});},2500);
+}
+let lastView=null;
 function renderGame(){
   if(!G)return;
   const stage=$('#stage');
   stage.classList.toggle('compact',G.teams.length>8);
+  stage.classList.toggle('d3',!!G.cfg.d3);
+  /* camera move only when the screen really changes: zoom in to a question, pull back to the board */
+  const view=S?'s:'+S.step:'b:'+G.turn+':'+G.round;
+  let anim='';
+  if(view!==lastView){
+    anim=S?(S.step==='result'?'out':'in'):(lastView&&lastView[0]==='s'?'out':'boot');
+    lastView=view;
+  }
+  stage.dataset.anim=anim;
   stage.innerHTML=S?strikeHtml():turnHtml();
 }
 
@@ -1173,6 +1857,7 @@ function openStrike(ci,row){
   const atk=G.teams[G.turn],foes=G.teams.filter(t=>t!==atk&&t.alive);
   S={atk,key,ci,row,value:(row+1)*100,surge:G.surge===key,step:'target',target:foes.length===1?foes[0]:null,mult:1,dmg:0,si:-1,shot:null,res:null,ammoQ:null,replQ:null,idea:pick(IDEAS),hit:null,rep:null};
   Snd.play('pick');if(S.surge)setTimeout(()=>Snd.play('surge'),180);
+  Voice.say(CATS[ci].name+' '+S.value+(S.surge?', power surge':''));
   goStep(S.target?(G.cfg.challenge?'challenge':'ammo'):'target');
 }
 function goStep(step){
@@ -1254,7 +1939,7 @@ function mountQuestion(q,{seconds,contLabel,onDone}){
   if(q.q.length<=22&&/[=+×÷−%]/.test(q.q))$('#qtext').classList.add('eq');
   const host=$('#qopts');let answered=false,elapsed=0,extra=0,paused=false,lastT=performance.now(),lastSec=-1;
   const frac=()=>seconds?Math.min(1,elapsed/((seconds+extra)*1000)):1;
-  const btns=q.opts.map((o,i)=>{const b=el('button','opt',`<b>${'ABCD'[i]}</b><span></span>`);b.type='button';$('span',b).textContent=o;b.onclick=()=>finish(i);host.append(b);return b;});
+  const btns=q.opts.map((o,i)=>{const b=el('button','opt',`<b>${'ABCD'[i]}</b><span></span>`);b.type='button';b.style.setProperty('--oi',i);$('span',b).textContent=o;b.onclick=()=>finish(i);host.append(b);return b;});
   function finish(i){
     if(answered)return;answered=true;stopTimer();
     const f=Math.min(1,elapsed/(Math.max(1,seconds)*1000)),ok=i===q.ans,timedOut=i<0;
@@ -1330,7 +2015,7 @@ function mountFire(){
       const h=resolveHit(t,res.si,S.dmg,G.cfg.lastChance);S.hit=h;
       S.atk.stats.dealt+=h.taken;if(ship.sunk)S.atk.stats.sunk++;
       for(let a=0;a<N;a++)for(let d=0;d<N;d++)paint(cells[a*N+d],t.shots[a][d]);
-      setTimeout(()=>{Snd.play(ship.sunk?'sunk':'hit');ship.sunk?FX.sunk(x,y):FX.hit(x,y);FX.shake($('#stage'));},280);
+      setTimeout(()=>{Snd.play(ship.sunk?'sunk':'hit');ship.sunk?FX.sunk(x,y):FX.hit(x,y);FX.shake($('#stage'));sea.classList.remove('punch','pull');void sea.offsetWidth;sea.classList.add(ship.sunk?'pull':'punch');Voice.say(ship.sunk?'Ship destroyed':'Direct hit');},280);
       log(`${S.atk.name} hits ${t.name}'s ${ship.name} at ${coord} for ${h.taken}.`,'hit');
       const goesRepair=!ship.sunk&&t.alive;
       out.innerHTML=`<div class="fb no"><h3>Direct hit on the ${esc(ship.name)}!</h3><p>${h.taken} damage.${ship.sunk?(h.state==='holes'?' Every square is hit, so the hull collapses.':' The ship goes down.'):ship.critical?' It is at 0 HP: one answer can save it.':''}${goesRepair?` ${esc(t.name)} can repair by answering a question.`:''}</p></div>`;
@@ -1339,7 +2024,7 @@ function mountFire(){
     }else{
       paint(b,t.shots[r][c]);
       S.res={type:res.type};
-      setTimeout(()=>{Snd.play('miss');FX.splash(x,y);},280);
+      setTimeout(()=>{Snd.play('miss');FX.splash(x,y);Voice.say(res.type==='near'?'Near miss':'Miss');},280);
       log(`${S.atk.name} fires at ${coord} on ${t.name}: ${res.type==='near'?'miss, but a ship is close':'splash, nothing there'}.`);
       out.innerHTML=`<div class="fb"><h3>${res.type==='near'?'Near miss':'Splash'}</h3><p>${res.type==='near'?'The radar picked up a ship right next to that square.':'Nothing there. No damage this turn.'}</p></div>`;
       nxt.textContent='Continue';nxt.onclick=()=>{Snd.play('click');goStep('result');};
@@ -1361,6 +2046,7 @@ function mountRepair(){
       S.rep={ok,...r,crit};t.stats.healed+=r.heal;
       if(S.rep.sunk)S.atk.stats.sunk++;
       if(ok)Snd.play('deflect');
+      Voice.say(ok?(crit?'Ship saved':'Repair complete'):(crit?'Ship lost':'Repair failed'));
       log(ok?`${t.name} repairs the ${sh.name}: +${r.heal} HP${crit?' and saves it from sinking':''}.`:`${t.name} fails to repair the ${sh.name}${crit?' and it sinks':''}.`,ok?'good':'warn');
       if(r.eliminated)log(`${t.name} has been eliminated!`,'hit');
       goStep('result');
@@ -1383,11 +2069,11 @@ function resultHtml(){
     if(rep)rows.push([rep.ok?(rep.saved?'Repair saved the ship':'Repair heals'):'Repair failed',rep.ok?'+'+rep.heal:'0']);
     title=t.alive?(ship.sunk?`The ${ship.name} is sunk!`:`${esc(ship.name)} now at ${ship.hp} / ${ship.maxHp} HP`):`${esc(t.name)} is eliminated!`;
     body=`<table class="calc"><tbody>${rows.map(([a,b])=>`<tr><td>${esc(a)}</td><td>${b}</td></tr>`).join('')}<tr class="tot"><td>${esc(t.name)} HP now</td><td>${teamHp(t)} / ${teamMax(t)}</td></tr></tbody></table>
-      <div style="display:grid;gap:8px;margin-top:8px">${shipsHtml(t)}</div>`;
+      <div class="fleet2">${shipsHtml(t)}</div>`;
   }
   applyTheme(G.theme,teamForColor.color);
   return topBar('Result')+bannerHtml(teamForColor,'Result')+`<div class="qcols"><aside class="qleft"><div class="cap">${esc(CATS[S.ci].name)}</div><div class="big">${S.value}</div><div class="cap">points${S.surge?' · power surge x2':''}</div></aside>
-    <section class="qmid"><h3 class="qtext" style="font-size:44px">${title}</h3>${body}<button class="btn lg block" data-act="done" style="margin-top:auto">Next squad's turn</button></section>
+    <section class="qmid"><h3 class="qtext" style="font-size:40px">${title}</h3>${body}<button class="btn lg block" data-act="done" style="margin-top:auto">Next squad's turn</button></section>
     <aside class="qright"><div class="cap">Next up</div><div style="font-size:26px;font-weight:700;line-height:1.2">${esc(nextTeam().name)}</div></aside></div>`;
 }
 function afterResult(){
@@ -1432,7 +2118,7 @@ function endGame(reason){
     <div class="row2"><button class="btn lg" data-act="rematch">Rematch</button><button class="btn lg ghost" data-act="back">Back to setup</button></div>`;
   $('#victory').hidden=false;renderGame();
   $('[data-act="rematch"]').focus({preventScroll:true});
-  Snd.play('win');FX.rain(4200);FX.fireworks(6);
+  Snd.play('win');FX.rain(4200);FX.fireworks(6);Voice.say(winners.length===1?top.name+' wins':'It is a tie');
 }
 function toSetup(){
   stopTimer();S=null;G=null;
@@ -1468,13 +2154,15 @@ document.addEventListener('click',e=>{
     discard:()=>{store.del(ck('save'));renderSetup();},
     sound:toggleSound,
     theme:cycleTheme,
+    voice:()=>Voice.toggle(),
+    vhelp:()=>Voice.help(),
     end:openEnd,
     roster:openRoster,
     'add-team':()=>{if(setup.teams.length<MAX_TEAMS){setup.teams.push({name:defaultName(setup.teams.length),grade:setup.teams[0]?setup.teams[0].grade:3,members:[]});saveSetup();renderTeams();}},
     'del-team':()=>{const i=+b.closest('.trow').dataset.i;if(setup.teams.length>2){setup.teams.splice(i,1);saveSetup();renderTeams();}},
     tile:()=>openStrike(+b.dataset.ci,+b.dataset.r),
     'pick-target':()=>{S.target=G.teams[+b.dataset.i];Snd.play('click');renderGame();},
-    lock:()=>{Snd.play('click');goStep(G.cfg.challenge?'challenge':'ammo');},
+    lock:()=>{Snd.play('click');Voice.say('Target locked: '+S.target.name);goStep(G.cfg.challenge?'challenge':'ammo');},
     'cancel-strike':closeStrike,
     'chal-ok':()=>{Snd.play('correct');goStep('ammo');},
     'chal-no':()=>{Snd.play('wrong');S.res={type:'jam'};log(`${S.atk.name} missed the challenge. Turn passes.`,'warn');goStep('result');},
@@ -1506,6 +2194,10 @@ document.addEventListener('change',e=>{
   if(id==='tChal'){setup.cfg.challenge=e.target.checked;saveSetup();return;}
   if(id==='tHints'){setup.cfg.hints=e.target.checked;saveSetup();return;}
   if(id==='tSurp'){setup.cfg.surprise=e.target.checked;saveSetup();return;}
+  if(id==='tD3'){setup.cfg.d3=e.target.checked;saveSetup();return;}
+  if(id==='tFx'){setup.cfg.fx=e.target.checked;autoLite=false;saveSetup();applyFx();return;}
+  if(id==='tCall'){setup.cfg.callouts=e.target.checked;saveSetup();if(e.target.checked)Voice.say('Computer voice on');return;}
+  if(id==='tWake'){setup.cfg.wake=e.target.checked;saveSetup();return;}
   if(id==='clsSel'){
     if(e.target.value==='__new'){
       openModal(`<h2>New class</h2><div class="field"><label class="lbl" for="newCls">Class name</label><input type="text" id="newCls" maxlength="24" placeholder="Example: Kb"></div><div class="row2"><button class="btn" id="newGo">Create class</button><button class="btn ghost" id="newNo">Cancel</button></div>`);
@@ -1522,6 +2214,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!$('#modal').hidden){closeModal();return;}
   const tag=(e.target&&e.target.tagName)||'';
   if(!S||!qHandle||/INPUT|TEXTAREA|SELECT/.test(tag))return;
+  if(e.key==='r'||e.key==='R'){Voice.readQuestion();return;}
   const k=e.key.toLowerCase(),i='1234'.indexOf(k)>=0&&k.length===1?+k-1:'abcd'.indexOf(k)>=0&&k.length===1?'abcd'.indexOf(k):-1;
   if(i>=0)qHandle.pick(i);
 });
@@ -1530,7 +2223,18 @@ addEventListener('pointerdown',()=>Snd.unlock(),{once:true});
 /* ============================ start-up ============================ */
 Snd.vol=typeof setup.cfg.vol==='number'?setup.cfg.vol:.85;
 Snd.load();
-fit();renderSetup();
+fit();applyFx();renderSetup();
+(function rig(){
+  const p=$('#holoBg .parts');
+  if(p)for(let i=0;i<18;i++){const d=document.createElement('i');d.style.cssText=`left:${(Math.random()*100).toFixed(1)}%;--d:${(8+Math.random()*10).toFixed(1)}s;--dl:${(-Math.random()*14).toFixed(1)}s;--z:${(2+Math.random()*4).toFixed(1)}px`;p.append(d);}
+  let raf=0,mx=0,my=0;
+  addEventListener('pointermove',e=>{
+    if(e.pointerType!=='mouse')return;
+    mx=e.clientX;my=e.clientY;
+    if(raf)return;
+    raf=requestAnimationFrame(()=>{raf=0;const st=$('#stage');if(!st)return;st.style.setProperty('--px',((mx/innerWidth-.5)*2).toFixed(3));st.style.setProperty('--py',((my/innerHeight-.5)*2).toFixed(3));});
+  });
+})();
 window.__bj={get G(){return G;},get S(){return S;},setup:()=>setup};
 
 </script>
